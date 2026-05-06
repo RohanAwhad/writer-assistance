@@ -61,12 +61,19 @@ class ResourcesService:
 
         try:
             for pending_upload in pending_uploads:
-                stored_object = self._storage.put_object(
+                prepared_object = self._storage.prepare_object(
                     project_id=project_id,
                     logical_path=pending_upload.logical_path,
                     content=pending_upload.content,
                 )
-                written_storage_paths.append(stored_object.storage_path)
+                written_storage_paths.append(prepared_object.storage_path)
+                stored_object = self._storage.put_object(
+                    project_id=project_id,
+                    logical_path=pending_upload.logical_path,
+                    content=pending_upload.content,
+                    stored_object=prepared_object,
+                )
+                written_storage_paths[-1] = stored_object.storage_path
                 resources.append(
                     Resource(
                         id=str(uuid4()),

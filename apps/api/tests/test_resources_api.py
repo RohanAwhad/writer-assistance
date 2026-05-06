@@ -174,18 +174,14 @@ def test_failed_write_cleans_up_earlier_files(tmp_path) -> None:
     assert not any(path.is_file() for path in (tmp_path / "storage").rglob("*"))
 
 
-def test_after_write_failure_does_not_orphan_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_after_write_failure_does_not_orphan_file(tmp_path: Path) -> None:
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
         storage_root=tmp_path / "storage",
     )
+    app.state.storage = AfterWriteFailingStorage(tmp_path / "storage")
     client = TestClient(app, raise_server_exceptions=False)
     project = _create_project(client)
-
-    def _raise_after_write(*, storage_path: str, content_hash: str) -> None:
-        raise OSError("after write before return")
-
-    monkeypatch.setattr("writer_assistance_api.disk_storage.StoredObject", _raise_after_write)
 
     response = client.post(
         f"/projects/{project['id']}/resources/upload",
@@ -224,7 +220,14 @@ class FailingDiskStorage:
         self._disk_storage = DiskStorage(root)
         self._write_attempts = 0
 
-    def put_object(self, *, project_id: str, logical_path: str, content: bytes):
+    def prepare_object(self, *, project_id: str, logical_path: str, content: bytes):
+        return self._disk_storage.prepare_object(
+            project_id=project_id,
+            logical_path=logical_path,
+            content=content,
+        )
+
+    def put_object(self, *, project_id: str, logical_path: str, content: bytes, stored_object=None):
         self._write_attempts += 1
         if self._write_attempts == 2:
             raise OSError("disk full")
@@ -232,7 +235,35 @@ class FailingDiskStorage:
             project_id=project_id,
             logical_path=logical_path,
             content=content,
+            stored_object=stored_object,
         )
+
+    def read_object(self, storage_path: str) -> bytes:
+        return self._disk_storage.read_object(storage_path)
+
+    def delete_object(self, storage_path: str) -> None:
+        self._disk_storage.delete_object(storage_path)
+
+
+class AfterWriteFailingStorage:
+    def __init__(self, root: Path) -> None:
+        self._disk_storage = DiskStorage(root)
+
+    def prepare_object(self, *, project_id: str, logical_path: str, content: bytes):
+        return self._disk_storage.prepare_object(
+            project_id=project_id,
+            logical_path=logical_path,
+            content=content,
+        )
+
+    def put_object(self, *, project_id: str, logical_path: str, content: bytes, stored_object=None):
+        self._disk_storage.put_object(
+            project_id=project_id,
+            logical_path=logical_path,
+            content=content,
+            stored_object=stored_object,
+        )
+        raise OSError("after write before return")
 
     def read_object(self, storage_path: str) -> bytes:
         return self._disk_storage.read_object(storage_path)

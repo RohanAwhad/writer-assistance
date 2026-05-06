@@ -11,7 +11,16 @@ class StoredObject(BaseModel):
 
 
 class StorageDriver(Protocol):
-    def put_object(self, *, project_id: str, logical_path: str, content: bytes) -> StoredObject: ...
+    def prepare_object(self, *, project_id: str, logical_path: str, content: bytes) -> StoredObject: ...
+
+    def put_object(
+        self,
+        *,
+        project_id: str,
+        logical_path: str,
+        content: bytes,
+        stored_object: StoredObject | None = None,
+    ) -> StoredObject: ...
 
     def read_object(self, storage_path: str) -> bytes: ...
 
