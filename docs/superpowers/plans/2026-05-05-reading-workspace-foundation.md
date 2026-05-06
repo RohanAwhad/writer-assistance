@@ -6,7 +6,7 @@
 
 **Architecture:** Use a Python backend in `apps/api` and a React/TypeScript frontend in `apps/web`. The backend exposes a typed JSON API with FastAPI, persists metadata in SQLite via SQLAlchemy 2.0, stores uploaded markdown files on local disk behind a storage abstraction, and runs AI analysis as explicit background analysis runs with per-lens status tracking.
 
-**Tech Stack:** Python 3.12, `uv`, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, pytest, mypy, React, Vite, TypeScript, React Router, TanStack Query, Vitest, Testing Library, Playwright
+**Tech Stack:** Python 3.12, `uv`, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, pytest, mypy, `anthropic[vertex]`, React, Vite, TypeScript, React Router, TanStack Query, Vitest, Testing Library, Playwright
 
 ---
 
@@ -33,6 +33,9 @@ This plan intentionally covers only the first executable slice of the approved s
 - Backend persistence uses SQLite at `./data/app.db`.
 - Uploaded markdown resources are stored on local disk at `./data/storage`.
 - AI analysis is explicitly user-triggered from the current resource view.
+- AI analysis uses the Anthropic Vertex Python SDK via `from anthropic import AnthropicVertex`.
+- The analysis model is fixed to `claude-sonnet-4-5@20250929`.
+- The backend reads `ANTHROPIC_VERTEX_PROJECT_ID` and `CLOUD_ML_REGION` from the environment for Vertex configuration.
 - The initial lens catalog is fixed to:
   - `financial`
   - `real_estate`
@@ -95,7 +98,7 @@ This plan intentionally covers only the first executable slice of the approved s
 - `apps/api/src/writer_assistance_api/services/annotations.py`
 - `apps/api/src/writer_assistance_api/services/analysis_runs.py`
 - `apps/api/src/writer_assistance_api/ai/client.py`
-- `apps/api/src/writer_assistance_api/ai/openai_client.py`
+- `apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py`
 - `apps/api/src/writer_assistance_api/ai/fake_client.py`
 - `apps/api/tests/test_health.py`
 - `apps/api/tests/test_projects_api.py`
@@ -481,7 +484,7 @@ export async function createProject(input: { title: string }) {
 
 - [ ] **Step 5: Run the tests, migration, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_projects_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run src/routes/root.test.tsx`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_projects_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run src/routes/root.test.tsx`
 
 Expected: PASS with project creation/listing working in the API, the root route rendering, and mypy clean.
 
@@ -981,10 +984,12 @@ git commit -m "feat: add quote-anchored user notes"
 ## Task 6: Add Explicit AI Analysis Runs And Suggestion Review
 
 **Files:**
+- Modify: `apps/api/pyproject.toml`
+- Modify: `apps/api/src/writer_assistance_api/config.py`
 - Create: `apps/api/alembic/versions/0004_create_analysis_runs.py`
 - Create: `apps/api/src/writer_assistance_api/background.py`
 - Create: `apps/api/src/writer_assistance_api/ai/client.py`
-- Create: `apps/api/src/writer_assistance_api/ai/openai_client.py`
+- Create: `apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py`
 - Create: `apps/api/src/writer_assistance_api/ai/fake_client.py`
 - Create: `apps/api/src/writer_assistance_api/schemas/analysis_runs.py`
 - Create: `apps/api/src/writer_assistance_api/services/analysis_runs.py`
@@ -1051,9 +1056,21 @@ Expected: FAIL because no analysis-run models, routes, or AI client exist yet.
 
 - [ ] **Step 3: Implement typed AI clients, models, and status-tracking schemas**
 
+```toml
+# apps/api/pyproject.toml
+[project]
+dependencies = [
+  "alembic>=1.14.0",
+  "anthropic[vertex]>=0.39.0",
+  "fastapi>=0.115.0",
+  "sqlalchemy>=2.0.36",
+  "uvicorn>=0.30.0",
+]
+```
+
 ```python
 # apps/api/src/writer_assistance_api/ai/client.py
-from typing import Literal, Protocol
+from typing import Literal, Protocol, TypedDict
 
 
 LensName = Literal["financial", "real_estate", "political", "software_engineering"]
@@ -1072,6 +1089,69 @@ class AiClient(Protocol):
         markdown: str,
         logical_path: str,
     ) -> list[AiSuggestionDraft]: ...
+```
+
+```python
+# apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py
+import json
+from typing import cast
+
+from anthropic import AnthropicVertex
+
+from writer_assistance_api.ai.client import AiClient, AiSuggestionDraft, LensName
+
+MODEL_NAME = "claude-sonnet-4-5@20250929"
+
+
+class AnthropicVertexAiClient(AiClient):
+    def __init__(self, *, project_id: str, region: str) -> None:
+        self._client = AnthropicVertex(project_id=project_id, region=region)
+
+    def generate_suggestions(
+        self,
+        *,
+        lens: LensName,
+        markdown: str,
+        logical_path: str,
+    ) -> list[AiSuggestionDraft]:
+        response = self._client.messages.create(
+            model=MODEL_NAME,
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Lens: {lens}\n"
+                        f"Resource: {logical_path}\n"
+                        "Return 1-3 concise note suggestions as JSON with keys "
+                        "`source_context` and `suggestion_body`.\n\n"
+                        f"{markdown}"
+                    ),
+                }
+            ],
+        )
+        payload = response.content[0].text
+        return cast(list[AiSuggestionDraft], json.loads(payload))
+```
+
+```python
+# apps/api/src/writer_assistance_api/config.py
+import os
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Settings:
+    database_url: str = DEFAULT_DATABASE_URL
+    anthropic_vertex_project_id: str | None = None
+    cloud_ml_region: str | None = None
+
+
+def get_settings(*, database_url: str | None = None) -> Settings:
+    return Settings(
+        database_url=database_url or os.getenv("WRITER_ASSISTANCE_DATABASE_URL") or DEFAULT_DATABASE_URL,
+        anthropic_vertex_project_id=os.getenv("ANTHROPIC_VERTEX_PROJECT_ID"),
+        cloud_ml_region=os.getenv("CLOUD_ML_REGION"),
+    )
 ```
 
 ```python
@@ -1182,6 +1262,34 @@ def accept_suggestion(
     return service.accept_suggestion(suggestion_id)
 ```
 
+```python
+# apps/api/src/writer_assistance_api/app.py
+from pathlib import Path
+
+from fastapi import FastAPI
+
+from writer_assistance_api.ai.anthropic_vertex_client import AnthropicVertexAiClient
+from writer_assistance_api.ai.client import AiClient
+
+def create_app(
+    *,
+    database_url: str | None = None,
+    storage_root: Path | None = None,
+    ai_client: AiClient | None = None,
+) -> FastAPI:
+    settings = get_settings(database_url=database_url)
+    resolved_ai_client = ai_client
+    if resolved_ai_client is None:
+        assert settings.anthropic_vertex_project_id is not None
+        assert settings.cloud_ml_region is not None
+        resolved_ai_client = AnthropicVertexAiClient(
+            project_id=settings.anthropic_vertex_project_id,
+            region=settings.cloud_ml_region,
+        )
+    app = FastAPI(title="Writer Assistance API")
+    app.state.ai_client = resolved_ai_client
+```
+
 - [ ] **Step 5: Add lens selection and suggestion review UI**
 
 ```tsx
@@ -1247,7 +1355,7 @@ export function AiSuggestionsPanel({
 
 - [ ] **Step 6: Run migration, API test, frontend test, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run src/routes/project.test.tsx`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run src/routes/project.test.tsx`
 
 Expected: PASS with separate generation and review state, partial per-lens failure behavior, retry support, and mypy clean.
 
@@ -1315,7 +1423,7 @@ Expected: FAIL until the full create-upload-read-note-analyze flow exists.
   "private": true,
   "scripts": {
     "web:install": "pnpm --dir apps/web install",
-    "web:test": "pnpm --dir apps/web vitest run",
+      "web:test": "pnpm --dir apps/web exec vitest run",
     "test:e2e": "pnpm exec playwright test"
   },
   "devDependencies": {
@@ -1333,7 +1441,7 @@ web-test:
 	pnpm --dir apps/web vitest run
 
 smoke:
-	uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test
+	uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run && pnpm exec playwright test
 ```
 
 ```md
@@ -1353,7 +1461,7 @@ The app stores SQLite data in `./data/app.db` and markdown resources in `./data/
 
 - [ ] **Step 4: Run the full verification suite**
 
-Run: `uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test`
+Run: `uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run && pnpm exec playwright test`
 
 Expected: PASS with backend tests, strict mypy, frontend tests, and one browser smoke test all green.
 
