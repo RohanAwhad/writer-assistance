@@ -174,6 +174,32 @@ def test_failed_write_cleans_up_earlier_files(tmp_path) -> None:
     assert not any(path.is_file() for path in (tmp_path / "storage").rglob("*"))
 
 
+def test_after_write_failure_does_not_orphan_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        storage_root=tmp_path / "storage",
+    )
+    client = TestClient(app, raise_server_exceptions=False)
+    project = _create_project(client)
+
+    def _raise_after_write(*, storage_path: str, content_hash: str) -> None:
+        raise OSError("after write before return")
+
+    monkeypatch.setattr("writer_assistance_api.disk_storage.StoredObject", _raise_after_write)
+
+    response = client.post(
+        f"/projects/{project['id']}/resources/upload",
+        files=[
+            ("paths", (None, "research/market.md")),
+            ("files", ("market.md", b"# Market", "text/markdown")),
+        ],
+    )
+
+    assert response.status_code == 500
+    assert _stored_resources(client) == []
+    assert not any(path.is_file() for path in (tmp_path / "storage").rglob("*"))
+
+
 def test_sqlite_startup_backfills_resource_uniqueness_for_legacy_database(tmp_path: Path) -> None:
     database_url = _create_legacy_sqlite_database(tmp_path / "legacy.db")
 
