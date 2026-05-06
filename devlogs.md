@@ -118,3 +118,4 @@
 - Added SQLite, Alembic migrations, project APIs, and the initial React shell.
 - Added the rendered reading workspace with resource tree navigation and markdown viewing.
 - Task 5 progress: added persisted quote-anchored user notes with annotation APIs, storage, and a minimal notes panel flow in the reading workspace.
+- Task 6 progress: added explicit AI analysis runs, per-lens suggestion persistence/review state, suggestion accept/discard flows, and a reading-workspace UI for running and reviewing AI suggestions.
