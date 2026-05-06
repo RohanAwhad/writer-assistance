@@ -15,6 +15,21 @@ export type ProjectsResponse = {
   projects: Project[];
 };
 
+export type Resource = {
+  id: string;
+  project_id: string;
+  logical_path: string;
+  original_filename: string;
+  storage_location: string;
+  content_hash: string;
+  upload_status: string;
+  created_at: string;
+};
+
+export type UploadResourcesResponse = {
+  resources: Resource[];
+};
+
 const projectsQueryKey = ['projects'] as const;
 
 export async function listProjects(): Promise<ProjectsResponse> {
@@ -39,6 +54,34 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
   }
 
   return (await response.json()) as Project;
+}
+
+type DirectoryFile = File & {
+  webkitRelativePath?: string;
+};
+
+export async function uploadResources(
+  projectId: string,
+  files: File[],
+): Promise<UploadResourcesResponse> {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    const directoryFile = file as DirectoryFile;
+    formData.append('files', file, file.name);
+    formData.append('paths', directoryFile.webkitRelativePath || file.name);
+  });
+
+  const response = await fetch(`/api/projects/${projectId}/resources/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to upload resources');
+  }
+
+  return (await response.json()) as UploadResourcesResponse;
 }
 
 export function useProjectsQuery() {

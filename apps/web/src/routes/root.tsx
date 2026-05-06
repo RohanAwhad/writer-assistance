@@ -1,5 +1,6 @@
 import { CreateProjectForm } from '../components/create-project-form';
 import { ProjectList } from '../components/project-list';
+import { ResourceUploadForm } from '../components/resource-upload-form';
 import { useProjectsQuery } from '../lib/api';
 
 function RootRouteContent() {
@@ -20,6 +21,17 @@ function RootRouteContent() {
       <h1>Writer Assistance</h1>
       <CreateProjectForm />
       {projectsContent}
+      {!isPending && !isError && projects.length ? (
+        <section>
+          <h2>Resource uploads</h2>
+          {projects.map((project) => (
+            <section key={project.id}>
+              <h3>{project.title}</h3>
+              <ResourceUploadForm projectId={project.id} />
+            </section>
+          ))}
+        </section>
+      ) : null}
     </main>
   );
 }

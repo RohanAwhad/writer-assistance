@@ -10,6 +10,11 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "projects" in inspector.get_table_names():
+        return
+
     op.create_table(
         "projects",
         sa.Column("id", sa.String(), primary_key=True),
