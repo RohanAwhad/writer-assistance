@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -25,6 +25,9 @@ class Project(Base):
 
 class Resource(Base):
     __tablename__ = "resources"
+    __table_args__ = (
+        Index("ux_resources_project_logical_path", "project_id", "logical_path", unique=True),
+    )
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)

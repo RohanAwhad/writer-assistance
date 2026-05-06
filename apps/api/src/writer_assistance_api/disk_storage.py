@@ -18,3 +18,6 @@ class DiskStorage(StorageDriver):
 
     def read_object(self, storage_path: str) -> bytes:
         return Path(storage_path).read_bytes()
+
+    def delete_object(self, storage_path: str) -> None:
+        Path(storage_path).unlink(missing_ok=True)

@@ -20,7 +20,6 @@ export type Resource = {
   project_id: string;
   logical_path: string;
   original_filename: string;
-  storage_location: string;
   content_hash: string;
   upload_status: string;
   created_at: string;

@@ -12,7 +12,6 @@ class ResourceResponse(BaseModel):
     project_id: str
     logical_path: str
     original_filename: str
-    storage_location: str
     content_hash: str
     upload_status: str
     created_at: datetime
