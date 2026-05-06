@@ -112,3 +112,4 @@
 - Locked the backend stack to FastAPI + Pydantic v2 + SQLAlchemy 2.0 + Alembic + pytest + strict mypy.
 - Kept the frontend as React + TypeScript + Vite.
 - Bootstrapped the Python FastAPI backend with a strict mypy baseline and a health route.
+- Added SQLite, Alembic migrations, project APIs, and the initial React shell.
