@@ -37,7 +37,75 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('shows a resource tree and renders the selected markdown file', async () => {
+it('shows resources in a folder tree and renders the selected markdown file', async () => {
+  fetchMock.mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+            {
+              id: 'resource-2',
+              project_id: 'project-1',
+              logical_path: 'research/notes/zoning.md',
+              original_filename: 'zoning.md',
+              content_hash: 'hash-2',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+            {
+              id: 'resource-3',
+              project_id: 'project-1',
+              logical_path: 'summary.md',
+              original_filename: 'summary.md',
+              content_hash: 'hash-3',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-2/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-2',
+          markdown: '# Zoning\n\nRules are changing.',
+        }),
+      );
+    }
+
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  renderProjectRoute();
+
+  expect(await screen.findByText('research')).toBeInTheDocument();
+  expect(screen.getByText('notes')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'market.md' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'zoning.md' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'summary.md' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'research/market.md' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'research/notes/zoning.md' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'zoning.md' }));
+
+  expect(await screen.findByRole('heading', { name: 'Zoning' })).toBeInTheDocument();
+  expect(screen.getByText('Rules are changing.')).toBeInTheDocument();
+});
+
+it('shows a neutral placeholder before a resource is selected', async () => {
   fetchMock.mockImplementation(async (input) => {
     const url = input instanceof Request ? input.url : String(input);
 
@@ -59,22 +127,12 @@ it('shows a resource tree and renders the selected markdown file', async () => {
       );
     }
 
-    if (url === '/api/resources/resource-1/content') {
-      return new Response(
-        JSON.stringify({
-          resource_id: 'resource-1',
-          markdown: '# Market\n\nDemand is rising.',
-        }),
-      );
-    }
-
     throw new Error(`Unexpected request: ${url}`);
   });
 
   renderProjectRoute();
 
-  fireEvent.click(await screen.findByRole('button', { name: 'research/market.md' }));
-
-  expect(await screen.findByRole('heading', { name: 'Market' })).toBeInTheDocument();
-  expect(screen.getByText('Demand is rising.')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'market.md' })).toBeInTheDocument();
+  expect(screen.getByText('Select a document to preview.')).toBeInTheDocument();
+  expect(screen.queryByText('Loading document...')).not.toBeInTheDocument();
 });

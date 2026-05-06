@@ -105,6 +105,27 @@ def test_get_resource_content_returns_uploaded_markdown(tmp_path) -> None:
     }
 
 
+def test_get_resource_content_rejects_invalid_utf8_markdown(tmp_path) -> None:
+    client = _create_client(tmp_path)
+    project = _create_project(client)
+
+    upload_response = client.post(
+        f"/projects/{project['id']}/resources/upload",
+        files=[
+            ("paths", (None, "research/broken.md")),
+            ("files", ("broken.md", b"# Broken\xffmarkdown", "text/markdown")),
+        ],
+    )
+
+    assert upload_response.status_code == 201
+    resource = upload_response.json()["resources"][0]
+
+    response = client.get(f"/resources/{resource['id']}/content")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Resource content is not valid UTF-8 markdown"}
+
+
 def test_upload_rejects_duplicate_logical_path_in_same_project(tmp_path) -> None:
     client = _create_client(tmp_path)
     project = _create_project(client)

@@ -29,12 +29,16 @@ export function ProjectRoute() {
     resourcesContent = <p role="alert">Unable to load resources.</p>;
   }
 
-  let markdownContent = <MarkdownViewer markdown={resourceQuery.data?.markdown ?? ''} />;
+  let markdownContent = <p>Select a document to preview.</p>;
 
-  if (resourceQuery.isPending) {
-    markdownContent = <p>Loading document...</p>;
-  } else if (resourceQuery.isError) {
-    markdownContent = <p role="alert">Unable to load document.</p>;
+  if (resourceId) {
+    markdownContent = <MarkdownViewer markdown={resourceQuery.data?.markdown ?? ''} />;
+
+    if (resourceQuery.isPending) {
+      markdownContent = <p>Loading document...</p>;
+    } else if (resourceQuery.isError) {
+      markdownContent = <p role="alert">Unable to load document.</p>;
+    }
   }
 
   return (

@@ -123,7 +123,13 @@ class ResourcesService:
         if resource is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
-        markdown = self._storage.read_object(resource.storage_location).decode("utf-8")
+        try:
+            markdown = self._storage.read_object(resource.storage_location).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Resource content is not valid UTF-8 markdown",
+            ) from exc
         return ResourceContentResponse(resource_id=resource.id, markdown=markdown)
 
     def _find_conflicting_paths(self, *, project_id: str, logical_paths: list[str]) -> list[str]:
