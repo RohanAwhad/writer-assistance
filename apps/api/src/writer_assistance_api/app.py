@@ -3,7 +3,11 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from writer_assistance_api.config import get_settings
-from writer_assistance_api.db import create_all_tables, create_engine_and_session_factory
+from writer_assistance_api.db import (
+    create_all_tables,
+    create_engine_and_session_factory,
+    ensure_sqlite_resource_logical_path_uniqueness,
+)
 from writer_assistance_api.disk_storage import DiskStorage
 from writer_assistance_api.routes.health import router as health_router
 from writer_assistance_api.routes.projects import router as projects_router
@@ -20,6 +24,7 @@ def create_app(*, database_url: str | None = None, storage_root: Path | None = N
 
     if settings.database_url.startswith("sqlite"):
         create_all_tables(engine)
+        ensure_sqlite_resource_logical_path_uniqueness(engine)
 
     app = FastAPI(title="Writer Assistance API")
     app.state.engine = engine

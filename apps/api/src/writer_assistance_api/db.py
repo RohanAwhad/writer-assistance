@@ -5,12 +5,18 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import Request
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from writer_assistance_api.models import Base
+
+RESOURCE_LOGICAL_PATH_INDEX_NAME = "ux_resources_project_logical_path"
+SQLITE_DUPLICATE_LOGICAL_PATHS_MESSAGE = (
+    "SQLite resources table contains duplicate logical paths. "
+    "Remove duplicates or recreate the local database before continuing."
+)
 
 
 def create_engine_and_session_factory(database_url: str) -> tuple[Engine, sessionmaker[Session]]:
@@ -33,6 +39,38 @@ def create_engine_and_session_factory(database_url: str) -> tuple[Engine, sessio
 
 def create_all_tables(engine: Engine) -> None:
     Base.metadata.create_all(bind=engine)
+
+
+def ensure_sqlite_resource_logical_path_uniqueness(engine: Engine) -> None:
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+        if "resources" not in inspector.get_table_names():
+            return
+
+        existing_indexes = {index["name"] for index in inspector.get_indexes("resources")}
+        if RESOURCE_LOGICAL_PATH_INDEX_NAME in existing_indexes:
+            return
+
+        duplicate_row = connection.execute(
+            text(
+                """
+                SELECT project_id, logical_path
+                FROM resources
+                GROUP BY project_id, logical_path
+                HAVING COUNT(*) > 1
+                LIMIT 1
+                """
+            )
+        ).first()
+        if duplicate_row is not None:
+            raise RuntimeError(SQLITE_DUPLICATE_LOGICAL_PATHS_MESSAGE)
+
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX ux_resources_project_logical_path "
+                "ON resources (project_id, logical_path)"
+            )
+        )
 
 
 def get_session(request: Request) -> Iterator[Session]:

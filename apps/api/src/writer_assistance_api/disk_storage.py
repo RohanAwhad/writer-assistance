@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from uuid import uuid4
 
 from writer_assistance_api.storage import StorageDriver, StoredObject
 
@@ -11,7 +12,7 @@ class DiskStorage(StorageDriver):
         self.root = root
 
     def put_object(self, *, project_id: str, logical_path: str, content: bytes) -> StoredObject:
-        target = self.root / project_id / logical_path
+        target = self.root / project_id / ".objects" / str(uuid4()) / Path(*PurePosixPath(logical_path).parts)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
         return StoredObject(storage_path=str(target), content_hash=sha256(content).hexdigest())
