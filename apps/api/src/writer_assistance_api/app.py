@@ -10,12 +10,12 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     settings = get_settings(database_url=database_url)
     engine, session_factory = create_engine_and_session_factory(settings.database_url)
 
+    if settings.database_url.startswith("sqlite"):
+        create_all_tables(engine)
+
     app = FastAPI(title="Writer Assistance API")
     app.state.engine = engine
     app.state.session_factory = session_factory
-
-    if settings.database_url.endswith(":memory:"):
-        create_all_tables(engine)
 
     app.include_router(health_router)
     app.include_router(projects_router)
