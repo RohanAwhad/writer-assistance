@@ -26,8 +26,8 @@ test('smoke covers the reading workspace flow', async ({ page }, testInfo) => {
   const uploadResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/projects/') && response.url().includes('/resources/upload'),
   );
-  await uploadSection.getByLabel('Upload markdown').setInputFiles(uploadDirectory);
-  await uploadSection.locator('button[type="submit"]').click();
+  await uploadSection.getByLabel('Upload markdown folder').setInputFiles(uploadDirectory);
+  await uploadSection.getByRole('button', { name: 'Upload folder' }).click();
   const uploadResponse = await uploadResponsePromise;
   const uploadPayload = (await uploadResponse.json()) as {
     resources: Array<{ logical_path: string }>;

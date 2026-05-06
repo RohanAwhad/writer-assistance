@@ -12,10 +12,11 @@ export function ResourceUploadForm({ projectId }: ResourceUploadFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>, inputName: string) {
     event.preventDefault();
 
-    const fileInput = event.currentTarget.elements.namedItem('files');
+    const form = event.currentTarget;
+    const fileInput = form.elements.namedItem(inputName);
     if (!(fileInput instanceof HTMLInputElement)) {
       return;
     }
@@ -31,7 +32,7 @@ export function ResourceUploadForm({ projectId }: ResourceUploadFormProps) {
 
     try {
       const result = await uploadResources(projectId, files);
-      event.currentTarget.reset();
+      form.reset();
       setSuccessMessage(
         `Uploaded ${result.resources.length} markdown file${result.resources.length === 1 ? '' : 's'}.`,
       );
@@ -43,23 +44,38 @@ export function ResourceUploadForm({ projectId }: ResourceUploadFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor={`resource-upload-${projectId}`}>Upload markdown</label>
-      <input
-        id={`resource-upload-${projectId}`}
-        name="files"
-        type="file"
-        accept=".md,text/markdown"
-        multiple
-        ref={(node) => {
-          node?.setAttribute('webkitdirectory', '');
-        }}
-      />
-      <button type="submit" disabled={isUploading}>
-        {isUploading ? 'Uploading...' : 'Upload markdown'}
-      </button>
+    <div>
+      <form onSubmit={(event) => void handleSubmit(event, 'markdown-files')}>
+        <label htmlFor={`resource-upload-files-${projectId}`}>Upload markdown files</label>
+        <input
+          id={`resource-upload-files-${projectId}`}
+          name="markdown-files"
+          type="file"
+          accept=".md,text/markdown"
+          multiple
+        />
+        <button type="submit" disabled={isUploading}>
+          {isUploading ? 'Uploading...' : 'Upload files'}
+        </button>
+      </form>
+      <form onSubmit={(event) => void handleSubmit(event, 'markdown-folder')}>
+        <label htmlFor={`resource-upload-folder-${projectId}`}>Upload markdown folder</label>
+        <input
+          id={`resource-upload-folder-${projectId}`}
+          name="markdown-folder"
+          type="file"
+          accept=".md,text/markdown"
+          multiple
+          ref={(node) => {
+            node?.setAttribute('webkitdirectory', '');
+          }}
+        />
+        <button type="submit" disabled={isUploading}>
+          {isUploading ? 'Uploading...' : 'Upload folder'}
+        </button>
+      </form>
       {errorMessage ? <p role="alert">{errorMessage}</p> : null}
       {successMessage ? <p>{successMessage}</p> : null}
-    </form>
+    </div>
   );
 }
