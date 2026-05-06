@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 
 from anthropic import AnthropicVertex
+from pydantic import BaseModel, Field
 
 from writer_assistance_api.ai.client import (
     AiSuggestionDraft,
     LensName,
-    normalize_suggestion_drafts,
 )
 from writer_assistance_api.config import Settings
 
@@ -16,28 +15,11 @@ MODEL_NAME = "claude-sonnet-4-5@20250929"
 SYSTEM_PROMPT = """
 You are generating note suggestions for a reading workspace.
 
-Return JSON only with this shape:
-{
-  "suggestions": [
-    {
-      "body": "short suggested note text",
-      "anchor": {
-        "quoteText": "exact quote from the resource",
-        "normalizedText": "lowercased normalized quote text",
-        "startOffset": 0,
-        "endOffset": 10,
-        "blockPath": ["paragraph", "1"],
-        "resolutionStatus": "exact"
-      }
-    }
-  ]
-}
-
 Rules:
 - Suggestions must be specific, concise, and useful to a human reader.
 - Use only direct quotes that appear in the provided markdown.
 - Return at most 3 suggestions.
-- If no useful suggestions exist, return {"suggestions": []}.
+- If no useful suggestions exist, return an empty suggestions list.
 """.strip()
 
 LENS_INSTRUCTIONS: Mapping[LensName, str] = {
@@ -46,6 +28,10 @@ LENS_INSTRUCTIONS: Mapping[LensName, str] = {
     "political": "Focus on governance, regulation, public policy, institutional power, and political risk or opportunity.",
     "software_engineering": "Focus on systems design, implementation constraints, process trade-offs, reliability, and technical debt themes.",
 }
+
+
+class AnalyzeResourceOutput(BaseModel):
+    suggestions: list[AiSuggestionDraft] = Field(default_factory=list)
 
 
 class AnthropicVertexAiClient:
@@ -77,7 +63,7 @@ class AnthropicVertexAiClient:
         markdown: str,
         logical_path: str,
     ) -> list[AiSuggestionDraft]:
-        response = self._client.messages.create(
+        response = self._client.messages.parse(
             model=MODEL_NAME,
             max_tokens=2000,
             temperature=0,
@@ -92,16 +78,12 @@ class AnthropicVertexAiClient:
                     ),
                 }
             ],
+            output_format=AnalyzeResourceOutput,
         )
-        text = _extract_text_content(response.content)
-        payload = _extract_json_payload(text)
-        if not isinstance(payload, dict):
-            raise ValueError("AI response must be a JSON object")
-
-        suggestions = payload.get("suggestions")
-        if not isinstance(suggestions, list):
-            raise ValueError("AI response must include a suggestions array")
-        return normalize_suggestion_drafts(suggestions)
+        parsed_output = response.parsed_output
+        if parsed_output is None:
+            raise ValueError("AI response did not include parsed structured output")
+        return parsed_output.suggestions
 
 
 def _build_user_prompt(*, lens: LensName, markdown: str, logical_path: str) -> str:
@@ -112,28 +94,3 @@ def _build_user_prompt(*, lens: LensName, markdown: str, logical_path: str) -> s
         "Markdown:\n"
         f"{markdown}"
     )
-
-
-def _extract_text_content(content_blocks: object) -> str:
-    if not isinstance(content_blocks, list):
-        raise ValueError("AI response did not include content blocks")
-
-    text_parts: list[str] = []
-    for block in content_blocks:
-        block_text = getattr(block, "text", None)
-        if isinstance(block_text, str):
-            text_parts.append(block_text)
-
-    combined = "".join(text_parts).strip()
-    if not combined:
-        raise ValueError("AI response did not include text content")
-    return combined
-
-
-def _extract_json_payload(text: str) -> object:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.removeprefix("```json").removeprefix("```").strip()
-        if stripped.endswith("```"):
-            stripped = stripped[:-3].strip()
-    return json.loads(stripped)
