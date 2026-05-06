@@ -34,6 +34,9 @@ class AnalyzeResourceOutput(BaseModel):
     suggestions: list[AiSuggestionDraft] = Field(default_factory=list)
 
 
+TOOL_NAME = "emit_suggestions"
+
+
 class AnthropicVertexAiClient:
     def __init__(
         self,
@@ -63,7 +66,7 @@ class AnthropicVertexAiClient:
         markdown: str,
         logical_path: str,
     ) -> list[AiSuggestionDraft]:
-        response = self._client.messages.parse(
+        response = self._client.messages.create(
             model=MODEL_NAME,
             max_tokens=2000,
             temperature=0,
@@ -78,11 +81,26 @@ class AnthropicVertexAiClient:
                     ),
                 }
             ],
-            output_format=AnalyzeResourceOutput,
+            tools=[
+                {
+                    "name": TOOL_NAME,
+                    "description": "Return reading-workspace note suggestions in the expected schema.",
+                    "input_schema": AnalyzeResourceOutput.model_json_schema(),
+                }
+            ],
+            tool_choice={"type": "tool", "name": TOOL_NAME},
         )
-        parsed_output = response.parsed_output
-        if parsed_output is None:
-            raise ValueError("AI response did not include parsed structured output")
+        tool_input = next(
+            (
+                getattr(block, "input", None)
+                for block in response.content
+                if getattr(block, "type", None) == "tool_use"
+            ),
+            None,
+        )
+        if tool_input is None:
+            raise ValueError("AI response did not include a tool_use block")
+        parsed_output = AnalyzeResourceOutput.model_validate(tool_input)
         return parsed_output.suggestions
 
 
