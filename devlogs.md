@@ -117,3 +117,4 @@
 - Bootstrapped the Python FastAPI backend with a strict mypy baseline and a health route.
 - Added SQLite, Alembic migrations, project APIs, and the initial React shell.
 - Added the rendered reading workspace with resource tree navigation and markdown viewing.
+- Task 5 progress: added persisted quote-anchored user notes with annotation APIs, storage, and a minimal notes panel flow in the reading workspace.

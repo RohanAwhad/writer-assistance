@@ -9,6 +9,7 @@ from writer_assistance_api.db import (
     ensure_sqlite_resource_logical_path_uniqueness,
 )
 from writer_assistance_api.disk_storage import DiskStorage
+from writer_assistance_api.routes.annotations import router as annotations_router
 from writer_assistance_api.routes.health import router as health_router
 from writer_assistance_api.routes.projects import router as projects_router
 from writer_assistance_api.routes.resources import router as resources_router
@@ -34,4 +35,5 @@ def create_app(*, database_url: str | None = None, storage_root: Path | None = N
     app.include_router(health_router)
     app.include_router(projects_router)
     app.include_router(resources_router)
+    app.include_router(annotations_router)
     return app
