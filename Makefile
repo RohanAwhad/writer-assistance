@@ -1,5 +1,5 @@
 api-dev:
-	uv run --project apps/api uvicorn writer_assistance_api.main:app --reload --app-dir apps/api/src --port 8000
+	uv run --project apps/api uvicorn writer_assistance_api.main:app --reload --port 8000
 
 api-test:
 	uv run --project apps/api pytest apps/api/tests -q
