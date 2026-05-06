@@ -237,12 +237,12 @@ api-test:
 	uv run --project apps/api pytest apps/api/tests -q
 
 api-typecheck:
-	uv run --project apps/api mypy apps/api/src
+	uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src
 ```
 
 - [ ] **Step 4: Sync dependencies and rerun test plus mypy**
 
-Run: `uv sync --project apps/api && uv run --project apps/api pytest apps/api/tests/test_health.py -q && uv run --project apps/api mypy apps/api/src`
+Run: `uv sync --project apps/api && uv run --project apps/api pytest apps/api/tests/test_health.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src`
 
 Expected: PASS with `1 passed` and mypy reporting `Success: no issues found`.
 
@@ -481,7 +481,7 @@ export async function createProject(input: { title: string }) {
 
 - [ ] **Step 5: Run the tests, migration, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_projects_api.py -q && uv run --project apps/api mypy apps/api/src && pnpm --dir apps/web vitest run src/routes/root.test.tsx`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_projects_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run src/routes/root.test.tsx`
 
 Expected: PASS with project creation/listing working in the API, the root route rendering, and mypy clean.
 
@@ -677,7 +677,7 @@ export async function uploadResources(projectId: string, files: File[]) {
 
 - [ ] **Step 5: Run migration, tests, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_resources_api.py -q && uv run --project apps/api mypy apps/api/src`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_resources_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src`
 
 Expected: PASS with both markdown files stored, logical paths preserved, and mypy clean.
 
@@ -962,7 +962,7 @@ export function NotesPanel({ notes }: { notes: Array<{ id: string; quoteText: st
 
 - [ ] **Step 5: Run migration, API test, frontend test, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_annotations_api.py -q && uv run --project apps/api mypy apps/api/src && pnpm --dir apps/web vitest run src/routes/project.test.tsx`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_annotations_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run src/routes/project.test.tsx`
 
 Expected: PASS with quote anchors persisted, notes visible in the UI, and mypy clean.
 
@@ -1247,7 +1247,7 @@ export function AiSuggestionsPanel({
 
 - [ ] **Step 6: Run migration, API test, frontend test, and mypy**
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy apps/api/src && pnpm --dir apps/web vitest run src/routes/project.test.tsx`
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run src/routes/project.test.tsx`
 
 Expected: PASS with separate generation and review state, partial per-lens failure behavior, retry support, and mypy clean.
 
@@ -1333,7 +1333,7 @@ web-test:
 	pnpm --dir apps/web vitest run
 
 smoke:
-	uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test
+	uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test
 ```
 
 ```md
@@ -1353,7 +1353,7 @@ The app stores SQLite data in `./data/app.db` and markdown resources in `./data/
 
 - [ ] **Step 4: Run the full verification suite**
 
-Run: `uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test`
+Run: `uv run --project apps/api pytest apps/api/tests -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web vitest run && pnpm exec playwright test`
 
 Expected: PASS with backend tests, strict mypy, frontend tests, and one browser smoke test all green.
 

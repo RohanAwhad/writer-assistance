@@ -5,4 +5,4 @@ api-test:
 	uv run --project apps/api pytest apps/api/tests -q
 
 api-typecheck:
-	uv run --project apps/api mypy apps/api/src
+	uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src
