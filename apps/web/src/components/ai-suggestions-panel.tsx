@@ -1,18 +1,20 @@
-import type {
-  AnalysisRun,
-  AnalysisSuggestion,
-  LensName,
+import {
+  type AnalysisRun,
+  canRetryAnalysisRun,
+  isLensDiscoveryActive,
+  isSuggestionGenerationActive,
 } from '../lib/api';
 
 import { LensPicker } from './lens-picker';
 
 type AiSuggestionsPanelProps = {
   resourceId: string | null;
-  selectedLenses: LensName[];
-  onToggleLens: (lens: LensName) => void;
+  isLatestAnalysisRunLoading: boolean;
   onRunAnalysis: () => void;
+  onRegenerateLenses: () => void;
   onRetryFailed: () => void;
   isRunningAnalysis: boolean;
+  isRegeneratingLenses: boolean;
   isRetryingFailed: boolean;
   analysisRun: AnalysisRun | null;
   onAcceptSuggestion: (suggestionId: string) => void;
@@ -22,20 +24,14 @@ type AiSuggestionsPanelProps = {
   errorMessage: string | null;
 };
 
-const LENS_LABELS: Record<LensName, string> = {
-  financial: 'financial',
-  real_estate: 'real_estate',
-  political: 'political',
-  software_engineering: 'software_engineering',
-};
-
 export function AiSuggestionsPanel({
   resourceId,
-  selectedLenses,
-  onToggleLens,
+  isLatestAnalysisRunLoading,
   onRunAnalysis,
+  onRegenerateLenses,
   onRetryFailed,
   isRunningAnalysis,
+  isRegeneratingLenses,
   isRetryingFailed,
   analysisRun,
   onAcceptSuggestion,
@@ -51,44 +47,57 @@ export function AiSuggestionsPanel({
         lensResult.suggestions.filter((suggestion) => suggestion.review_state === 'unreviewed'),
       )
     : [];
-  const isGenerationInProgress =
-    analysisRun?.generation_state === 'queued' || analysisRun?.generation_state === 'running';
-  const showGenerationState = isGenerationInProgress || (isRunningAnalysis && analysisRun === null);
+  const showDiscoveryState = isLensDiscoveryActive(analysisRun);
+  const showGenerationState = isSuggestionGenerationActive(analysisRun);
+  const showRetryFailedAction = canRetryAnalysisRun(analysisRun);
+  const discoveryFailureMessage =
+    analysisRun?.lens_discovery_status === 'failed'
+      ? (analysisRun.error_summary ?? 'Lens discovery failed. Regenerate lenses to try again.')
+      : null;
 
   let content = <p>Select a document to analyze.</p>;
 
   if (resourceId) {
     content = (
       <>
-        <LensPicker
-          selectedLenses={selectedLenses}
-          onToggleLens={onToggleLens}
-          disabled={isRunningAnalysis || isRetryingFailed}
-        />
-        <button
-          type="button"
-          onClick={onRunAnalysis}
-          disabled={selectedLenses.length === 0 || isRunningAnalysis}
-        >
-          {isRunningAnalysis ? 'Running analysis...' : 'Run analysis'}
-        </button>
+        {analysisRun ? (
+          <button
+            type="button"
+            onClick={onRegenerateLenses}
+            disabled={isRegeneratingLenses || isRunningAnalysis}
+          >
+            {isRegeneratingLenses ? 'Regenerating lenses...' : 'Regenerate lenses'}
+          </button>
+        ) : isLatestAnalysisRunLoading ? (
+          <p>Checking for an existing analysis run...</p>
+        ) : (
+          <button type="button" onClick={onRunAnalysis} disabled={isRunningAnalysis}>
+            {isRunningAnalysis ? 'Running analysis...' : 'Run analysis'}
+          </button>
+        )}
         {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+        {discoveryFailureMessage ? <p role="alert">{discoveryFailureMessage}</p> : null}
+        {showDiscoveryState ? <p>Discovering lenses...</p> : null}
+        {showGenerationState ? <p>Generating suggestions...</p> : null}
+        {analysisRun?.discovered_lenses.length ? (
+          <LensPicker discoveredLenses={analysisRun.discovered_lenses} />
+        ) : null}
         {failedLenses.length > 0 ? (
           <>
             <p>{`Failed lenses: ${failedLenses.map((lensResult) => lensResult.lens).join(', ')}`}</p>
-            <button type="button" onClick={onRetryFailed} disabled={isRetryingFailed}>
-              {isRetryingFailed ? 'Retrying failed lenses...' : 'Retry failed lenses'}
-            </button>
+            {showRetryFailedAction ? (
+              <button type="button" onClick={onRetryFailed} disabled={isRetryingFailed}>
+                {isRetryingFailed ? 'Retrying failed lenses...' : 'Retry failed lenses'}
+              </button>
+            ) : null}
           </>
         ) : null}
         {analysisRun ? (
-          showGenerationState ? (
-            <p>Generating AI suggestions...</p>
-          ) : activeSuggestions.length > 0 ? (
+          activeSuggestions.length > 0 ? (
             <ul>
               {activeSuggestions.map((suggestion) => (
                 <li key={suggestion.id}>
-                  <p>{humanizeLens(suggestion.lens)}</p>
+                  <p>{suggestion.lens}</p>
                   <blockquote>
                     <p>{suggestion.anchor.quoteText}</p>
                   </blockquote>
@@ -110,14 +119,12 @@ export function AiSuggestionsPanel({
                 </li>
               ))}
             </ul>
-          ) : (
+          ) : discoveryFailureMessage ? null : !showDiscoveryState && !showGenerationState ? (
             <p>No AI suggestions awaiting review.</p>
-          )
-        ) : (
+          ) : null
+        ) : isLatestAnalysisRunLoading ? null : (
           <p>
-            {showGenerationState
-              ? 'Generating AI suggestions...'
-              : 'Run analysis on this document to generate suggestions.'}
+            Run analysis on this document to generate suggestions.
           </p>
         )}
       </>
@@ -130,8 +137,4 @@ export function AiSuggestionsPanel({
       {content}
     </section>
   );
-}
-
-function humanizeLens(lens: AnalysisSuggestion['lens']) {
-  return LENS_LABELS[lens].replace('_', ' ');
 }

@@ -253,72 +253,19 @@ it('creates a quote-anchored note for the selected resource and shows it in the 
   });
 });
 
-it('queues analysis and polls the persisted latest run until suggestions are ready', async () => {
+it('shows a single Run analysis action before any analysis run exists', async () => {
   let createPayload: unknown = null;
-  let latestStage: 'none' | 'queued' | 'completed' = 'none';
-  let latestQueuedReads = 0;
-  let latestRunRequests = 0;
+  let latestRunExists = false;
   const queuedRun = {
     id: 'run-1',
     project_id: 'project-1',
     resource_id: 'resource-1',
+    lens_discovery_status: 'queued',
+    discovered_lenses: [],
     generation_state: 'queued',
     created_at: '2026-05-05T00:00:00Z',
     updated_at: '2026-05-05T00:00:00Z',
-    lens_results: [
-      {
-        id: 'lens-result-1',
-        lens: 'financial',
-        generation_state: 'queued',
-        error_message: null,
-        suggestions: [],
-      },
-      {
-        id: 'lens-result-2',
-        lens: 'political',
-        generation_state: 'queued',
-        error_message: null,
-        suggestions: [],
-      },
-    ],
-  };
-  const completedRun = {
-    ...queuedRun,
-    generation_state: 'completed_with_failures',
-    lens_results: [
-      {
-        id: 'lens-result-1',
-        lens: 'financial',
-        generation_state: 'succeeded',
-        error_message: null,
-        suggestions: [
-          {
-            id: 'suggestion-1',
-            analysis_run_id: 'run-1',
-            lens: 'financial',
-            body: 'Call out the demand trend as evidence of pricing power.',
-            review_state: 'unreviewed',
-            created_at: '2026-05-05T00:00:00Z',
-            updated_at: '2026-05-05T00:00:00Z',
-            anchor: {
-              quoteText: 'Demand is rising.',
-              normalizedText: 'demand is rising.',
-              startOffset: 0,
-              endOffset: 17,
-              blockPath: ['paragraph', '1'],
-              resolutionStatus: 'exact',
-            },
-          },
-        ],
-      },
-      {
-        id: 'lens-result-2',
-        lens: 'political',
-        generation_state: 'failed',
-        error_message: 'Political lens timed out',
-        suggestions: [],
-      },
-    ],
+    lens_results: [],
   };
 
   fetchMock.mockImplementation(async (input, init) => {
@@ -347,7 +294,7 @@ it('queues analysis and polls the persisted latest run until suggestions are rea
       return new Response(
         JSON.stringify({
           resource_id: 'resource-1',
-          markdown: '# Market\n\nDemand is rising.\n\nRules are changing.',
+          markdown: '# Market\n\nDemand is rising.',
         }),
       );
     }
@@ -357,25 +304,15 @@ it('queues analysis and polls the persisted latest run until suggestions are rea
     }
 
     if (url === '/api/resources/resource-1/analysis-runs/latest' && method === 'GET') {
-      latestRunRequests += 1;
-      if (latestStage === 'none') {
+      if (!latestRunExists) {
         return new Response(JSON.stringify({ detail: 'Analysis run not found' }), { status: 404 });
       }
-      if (latestStage === 'queued') {
-        latestQueuedReads += 1;
-        if (latestQueuedReads >= 2) {
-          latestStage = 'completed';
-          return new Response(JSON.stringify(completedRun));
-        }
-        return new Response(JSON.stringify(queuedRun));
-      }
-      return new Response(JSON.stringify(completedRun));
+      return new Response(JSON.stringify(queuedRun));
     }
 
     if (url === '/api/projects/project-1/analysis-runs' && method === 'POST') {
       createPayload = JSON.parse(String(init?.body));
-      latestStage = 'queued';
-      latestQueuedReads = 0;
+      latestRunExists = true;
       return new Response(JSON.stringify(queuedRun), { status: 202 });
     }
 
@@ -387,36 +324,195 @@ it('queues analysis and polls the persisted latest run until suggestions are rea
   fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
 
   const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
-  expect(within(suggestionsPanel).getByLabelText('Financial')).toBeChecked();
-  expect(within(suggestionsPanel).getByLabelText('Political')).toBeChecked();
-  expect(within(suggestionsPanel).getByLabelText('Real estate')).toBeChecked();
-  expect(within(suggestionsPanel).getByLabelText('Software engineering')).toBeChecked();
+  const runAnalysisButton = await within(suggestionsPanel).findByRole('button', {
+    name: 'Run analysis',
+  });
+  expect(runAnalysisButton).toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByRole('button', { name: 'Regenerate lenses' })).not.toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByLabelText('Financial')).not.toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByLabelText('Political')).not.toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByLabelText('Real estate')).not.toBeInTheDocument();
+  expect(
+    within(suggestionsPanel).queryByLabelText('Software engineering'),
+  ).not.toBeInTheDocument();
 
-  fireEvent.click(within(suggestionsPanel).getByLabelText('Real estate'));
-  fireEvent.click(within(suggestionsPanel).getByLabelText('Software engineering'));
-  fireEvent.click(within(suggestionsPanel).getByRole('button', { name: 'Run analysis' }));
+  fireEvent.click(runAnalysisButton);
 
   await waitFor(() => {
-    expect(createPayload).toEqual({
-      resource_id: 'resource-1',
-      lenses: ['financial', 'political'],
-    });
+    expect(createPayload).toEqual({ resource_id: 'resource-1' });
   });
-  expect(
-    await within(suggestionsPanel).findByText(
-      'Call out the demand trend as evidence of pricing power.',
-      {},
-      { timeout: 4000 },
-    ),
-  ).toBeInTheDocument();
-  expect(within(suggestionsPanel).getByText('Failed lenses: political')).toBeInTheDocument();
-  expect(latestRunRequests).toBeGreaterThanOrEqual(3);
-  expect(
-    within(suggestionsPanel).getByRole('button', { name: 'Retry failed lenses' }),
-  ).toBeInTheDocument();
 });
 
-it('keeps a persisted queued analysis run in generation mode after the create request returns', async () => {
+it('waits for the latest-run query to settle before offering Run analysis', async () => {
+  let resolveLatestRunResponse!: (response: Response) => void;
+  const latestRunResponse = new Promise<Response>((resolve) => {
+    resolveLatestRunResponse = resolve;
+  });
+
+  fetchMock.mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-1',
+          markdown: '# Market\n\nDemand is rising.',
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/annotations') {
+      return new Response(JSON.stringify({ annotations: [] }));
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/latest') {
+      return latestRunResponse;
+    }
+
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  renderProjectRoute();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
+
+  const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
+  expect(within(suggestionsPanel).getByText('Checking for an existing analysis run...')).toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByRole('button', { name: 'Run analysis' })).not.toBeInTheDocument();
+
+  resolveLatestRunResponse(
+    new Response(JSON.stringify({ detail: 'Analysis run not found' }), { status: 404 }),
+  );
+
+  expect(await within(suggestionsPanel).findByRole('button', { name: 'Run analysis' })).toBeInTheDocument();
+});
+
+it('renders discovered lenses from the latest run and offers regeneration', async () => {
+  fetchMock.mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-1',
+          markdown: '# Market\n\nDemand is rising.',
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/annotations') {
+      return new Response(
+        JSON.stringify({
+          annotations: [
+            {
+              id: 'annotation-1',
+              project_id: 'project-1',
+              resource_id: 'resource-1',
+              body: 'Accepted note persists.',
+              origin_type: 'accepted_ai',
+              provenance_source_id: 'suggestion-1',
+              created_at: '2026-05-05T00:00:00Z',
+              updated_at: '2026-05-05T00:00:00Z',
+              anchor: {
+                quoteText: 'Demand is rising.',
+                normalizedText: 'demand is rising.',
+                startOffset: 0,
+                endOffset: 17,
+                blockPath: ['paragraph', '1'],
+                resolutionStatus: 'exact',
+              },
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/latest') {
+      return new Response(
+        JSON.stringify({
+          id: 'run-2',
+          project_id: 'project-1',
+          resource_id: 'resource-1',
+          lens_discovery_status: 'succeeded',
+          discovered_lenses: [
+            {
+              name: 'Demand trend',
+              description: 'Highlights pricing power and revenue implications.',
+            },
+          ],
+          generation_state: 'succeeded',
+          lens_results: [
+            {
+              id: 'lens-result-1',
+              lens: 'Demand trend',
+              generation_state: 'succeeded',
+              error_message: null,
+              suggestions: [],
+            },
+          ],
+          created_at: '2026-05-05T00:00:00Z',
+          updated_at: '2026-05-05T00:00:00Z',
+        }),
+      );
+    }
+
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  renderProjectRoute();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
+
+  const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
+  expect(await within(suggestionsPanel).findByText('Demand trend')).toBeInTheDocument();
+  expect(
+    await within(suggestionsPanel).findByText('Highlights pricing power and revenue implications.'),
+  ).toBeInTheDocument();
+  expect(
+    await within(suggestionsPanel).findByRole('button', { name: 'Regenerate lenses' }),
+  ).toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByRole('button', { name: 'Run analysis' })).not.toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByLabelText('Financial')).not.toBeInTheDocument();
+  expect(screen.getByText('Accepted note persists.')).toBeInTheDocument();
+});
+
+it('shows discovery progress for a persisted queued run after the first create request returns', async () => {
   let createPayload: unknown = null;
   let latestStage: 'none' | 'queued' = 'none';
   let latestRunRequests = 0;
@@ -424,18 +520,12 @@ it('keeps a persisted queued analysis run in generation mode after the create re
     id: 'run-1',
     project_id: 'project-1',
     resource_id: 'resource-1',
+    lens_discovery_status: 'queued',
+    discovered_lenses: [],
     generation_state: 'queued',
     created_at: '2026-05-05T00:00:00Z',
     updated_at: '2026-05-05T00:00:00Z',
-    lens_results: [
-      {
-        id: 'lens-result-1',
-        lens: 'financial',
-        generation_state: 'queued',
-        error_message: null,
-        suggestions: [],
-      },
-    ],
+    lens_results: [],
   };
 
   fetchMock.mockImplementation(async (input, init) => {
@@ -495,24 +585,180 @@ it('keeps a persisted queued analysis run in generation mode after the create re
   fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
 
   const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
-  fireEvent.click(within(suggestionsPanel).getByLabelText('Real estate'));
-  fireEvent.click(within(suggestionsPanel).getByLabelText('Political'));
-  fireEvent.click(within(suggestionsPanel).getByLabelText('Software engineering'));
-  fireEvent.click(within(suggestionsPanel).getByRole('button', { name: 'Run analysis' }));
+  fireEvent.click(
+    await within(suggestionsPanel).findByRole('button', { name: 'Run analysis' }),
+  );
 
   await waitFor(() => {
-    expect(createPayload).toEqual({
-      resource_id: 'resource-1',
-      lenses: ['financial'],
-    });
+    expect(createPayload).toEqual({ resource_id: 'resource-1' });
     expect(latestRunRequests).toBeGreaterThanOrEqual(2);
   });
 
-  expect(within(suggestionsPanel).getByText('Generating AI suggestions...')).toBeInTheDocument();
+  expect(within(suggestionsPanel).getByText('Discovering lenses...')).toBeInTheDocument();
   expect(
-    within(suggestionsPanel).queryByText('No AI suggestions awaiting review.'),
+    within(suggestionsPanel).queryByText('Generating suggestions...'),
   ).not.toBeInTheDocument();
-  expect(within(suggestionsPanel).getByRole('button', { name: /analysis/i })).toBeDisabled();
+  expect(within(suggestionsPanel).getByRole('button', { name: 'Regenerate lenses' })).toBeDisabled();
+});
+
+it('shows a discovery failure message instead of the generic empty state', async () => {
+  fetchMock.mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-1',
+          markdown: '# Market\n\nDemand is rising.',
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/annotations') {
+      return new Response(JSON.stringify({ annotations: [] }));
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/latest') {
+      return new Response(
+        JSON.stringify({
+          id: 'run-1',
+          project_id: 'project-1',
+          resource_id: 'resource-1',
+          lens_discovery_status: 'failed',
+          discovered_lenses: [],
+          generation_state: 'failed',
+          error_summary: 'Lens discovery failed. Regenerate lenses to try again.',
+          lens_results: [],
+          created_at: '2026-05-05T00:00:00Z',
+          updated_at: '2026-05-05T00:00:00Z',
+        }),
+      );
+    }
+
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  renderProjectRoute();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
+
+  const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
+  expect(
+    await within(suggestionsPanel).findByRole('alert'),
+  ).toHaveTextContent('Lens discovery failed. Regenerate lenses to try again.');
+  expect(
+    within(suggestionsPanel).getByRole('button', { name: 'Regenerate lenses' }),
+  ).toBeInTheDocument();
+  expect(within(suggestionsPanel).queryByText('No AI suggestions awaiting review.')).not.toBeInTheDocument();
+});
+
+it('does not offer retry failed lenses while the latest run is still active', async () => {
+  fetchMock.mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-1',
+          markdown: '# Market\n\nDemand is rising.\n\nRules are changing.',
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/annotations') {
+      return new Response(JSON.stringify({ annotations: [] }));
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/latest') {
+      return new Response(
+        JSON.stringify({
+          id: 'run-1',
+          project_id: 'project-1',
+          resource_id: 'resource-1',
+          lens_discovery_status: 'succeeded',
+          discovered_lenses: [
+            {
+              name: 'Demand trend',
+              description: 'Highlights pricing power and revenue implications.',
+            },
+            {
+              name: 'Policy risk',
+              description: 'Checks whether policy language changes the interpretation.',
+            },
+          ],
+          generation_state: 'running',
+          error_summary: null,
+          lens_results: [
+            {
+              id: 'lens-result-1',
+              lens: 'Demand trend',
+              generation_state: 'failed',
+              error_message: 'Lens timed out',
+              suggestions: [],
+            },
+            {
+              id: 'lens-result-2',
+              lens: 'Policy risk',
+              generation_state: 'running',
+              error_message: null,
+              suggestions: [],
+            },
+          ],
+          created_at: '2026-05-05T00:00:00Z',
+          updated_at: '2026-05-05T00:00:00Z',
+        }),
+      );
+    }
+
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
+  renderProjectRoute();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
+
+  const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
+  expect(await within(suggestionsPanel).findByText('Failed lenses: Demand trend')).toBeInTheDocument();
+  expect(within(suggestionsPanel).getByText('Generating suggestions...')).toBeInTheDocument();
+  expect(
+    within(suggestionsPanel).queryByRole('button', { name: 'Retry failed lenses' }),
+  ).not.toBeInTheDocument();
 });
 
 it('rehydrates the persisted latest run after switching away and back', async () => {
@@ -521,20 +767,27 @@ it('rehydrates the persisted latest run after switching away and back', async ()
     id: 'run-1',
     project_id: 'project-1',
     resource_id: 'resource-1',
+    lens_discovery_status: 'succeeded',
+    discovered_lenses: [
+      {
+        name: 'Demand trend',
+        description: 'Highlights pricing power and revenue implications.',
+      },
+    ],
     generation_state: 'succeeded',
     created_at: '2026-05-05T00:00:00Z',
     updated_at: '2026-05-05T00:00:00Z',
     lens_results: [
       {
         id: 'lens-result-1',
-        lens: 'financial',
+        lens: 'Demand trend',
         generation_state: 'succeeded',
         error_message: null,
         suggestions: [
           {
             id: 'suggestion-1',
             analysis_run_id: 'run-1',
-            lens: 'financial',
+            lens: 'Demand trend',
             body: 'Persisted financial suggestion.',
             review_state: 'unreviewed',
             created_at: '2026-05-05T00:00:00Z',
@@ -633,6 +886,190 @@ it('rehydrates the persisted latest run after switching away and back', async ()
   expect(latestRunRequestsForResourceOne).toBeGreaterThanOrEqual(2);
 });
 
+it('keeps accepted notes visible when the latest run changes', async () => {
+  const annotations: Array<{
+    id: string;
+    project_id: string;
+    resource_id: string;
+    body: string;
+    origin_type: string;
+    provenance_source_id: string | null;
+    created_at: string;
+    updated_at: string;
+    anchor: {
+      quoteText: string;
+      normalizedText: string;
+      startOffset: number;
+      endOffset: number;
+      blockPath: string[];
+      resolutionStatus: string;
+    };
+  }> = [];
+  let latestStage: 'initial' | 'regenerated' = 'initial';
+  const initialRun = {
+    id: 'run-1',
+    project_id: 'project-1',
+    resource_id: 'resource-1',
+    lens_discovery_status: 'succeeded',
+    discovered_lenses: [
+      {
+        name: 'Demand trend',
+        description: 'Highlights pricing power and revenue implications.',
+      },
+    ],
+    generation_state: 'succeeded',
+    created_at: '2026-05-05T00:00:00Z',
+    updated_at: '2026-05-05T00:00:00Z',
+    lens_results: [
+      {
+        id: 'lens-result-1',
+        lens: 'Demand trend',
+        generation_state: 'succeeded',
+        error_message: null,
+        suggestions: [
+          {
+            id: 'suggestion-1',
+            analysis_run_id: 'run-1',
+            lens: 'Demand trend',
+            body: 'Capture the demand signal in the final memo.',
+            review_state: 'unreviewed',
+            created_at: '2026-05-05T00:00:00Z',
+            updated_at: '2026-05-05T00:00:00Z',
+            anchor: {
+              quoteText: 'Demand is rising.',
+              normalizedText: 'demand is rising.',
+              startOffset: 0,
+              endOffset: 17,
+              blockPath: ['paragraph', '1'],
+              resolutionStatus: 'exact',
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const queuedRegeneratedRun = {
+    id: 'run-2',
+    project_id: 'project-1',
+    resource_id: 'resource-1',
+    lens_discovery_status: 'queued',
+    discovered_lenses: [],
+    generation_state: 'queued',
+    created_at: '2026-05-05T00:00:00Z',
+    updated_at: '2026-05-05T00:00:00Z',
+    lens_results: [],
+  };
+  const regeneratedRun = {
+    id: 'run-2',
+    project_id: 'project-1',
+    resource_id: 'resource-1',
+    lens_discovery_status: 'succeeded',
+    discovered_lenses: [
+      {
+        name: 'Execution risk',
+        description: 'Looks for operational constraints in the same document.',
+      },
+    ],
+    generation_state: 'succeeded',
+    created_at: '2026-05-05T00:00:00Z',
+    updated_at: '2026-05-05T00:00:00Z',
+    lens_results: [
+      {
+        id: 'lens-result-2',
+        lens: 'Execution risk',
+        generation_state: 'succeeded',
+        error_message: null,
+        suggestions: [],
+      },
+    ],
+  };
+
+  fetchMock.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+
+    if (url === '/api/projects/project-1/resources') {
+      return new Response(
+        JSON.stringify({
+          resources: [
+            {
+              id: 'resource-1',
+              project_id: 'project-1',
+              logical_path: 'research/market.md',
+              original_filename: 'market.md',
+              content_hash: 'hash-1',
+              upload_status: 'uploaded',
+              created_at: '2026-05-05T00:00:00Z',
+            },
+          ],
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/content') {
+      return new Response(
+        JSON.stringify({
+          resource_id: 'resource-1',
+          markdown: '# Market\n\nDemand is rising.',
+        }),
+      );
+    }
+
+    if (url === '/api/resources/resource-1/annotations') {
+      return new Response(JSON.stringify({ annotations }));
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/latest' && method === 'GET') {
+      return new Response(JSON.stringify(latestStage === 'initial' ? initialRun : regeneratedRun));
+    }
+
+    if (url === '/api/analysis-suggestions/suggestion-1/accept' && method === 'POST') {
+      const suggestion = initialRun.lens_results[0].suggestions[0];
+      suggestion.review_state = 'accepted';
+      const annotation = {
+        id: 'annotation-accepted',
+        project_id: 'project-1',
+        resource_id: 'resource-1',
+        body: suggestion.body,
+        origin_type: 'accepted_ai',
+        provenance_source_id: suggestion.id,
+        created_at: '2026-05-05T00:00:00Z',
+        updated_at: '2026-05-05T00:00:00Z',
+        anchor: suggestion.anchor,
+      };
+      annotations.splice(0, annotations.length, annotation);
+      return new Response(JSON.stringify({ suggestion, annotation }), { status: 201 });
+    }
+
+    if (url === '/api/resources/resource-1/analysis-runs/regenerate-lenses' && method === 'POST') {
+      latestStage = 'regenerated';
+      return new Response(JSON.stringify(queuedRegeneratedRun), { status: 202 });
+    }
+
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  });
+
+  renderProjectRoute();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'market.md' }));
+
+  const notesPanel = await screen.findByRole('region', { name: 'Notes' });
+  const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
+
+  fireEvent.click(within(suggestionsPanel).getByRole('button', { name: 'Accept suggestion' }));
+
+  expect(
+    await within(notesPanel).findByText('Capture the demand signal in the final memo.'),
+  ).toBeInTheDocument();
+
+  fireEvent.click(within(suggestionsPanel).getByRole('button', { name: 'Regenerate lenses' }));
+
+  expect(await within(suggestionsPanel).findByText('Execution risk')).toBeInTheDocument();
+  expect(
+    within(notesPanel).getByText('Capture the demand signal in the final memo.'),
+  ).toBeInTheDocument();
+});
+
 it('accepts and discards AI suggestions from the persisted latest run while keeping notes separate until accepted', async () => {
   const annotations: Array<{
     id: string;
@@ -656,20 +1093,31 @@ it('accepts and discards AI suggestions from the persisted latest run while keep
     id: 'run-1',
     project_id: 'project-1',
     resource_id: 'resource-1',
+    lens_discovery_status: 'succeeded',
+    discovered_lenses: [
+      {
+        name: 'Demand trend',
+        description: 'Highlights pricing power and revenue implications.',
+      },
+      {
+        name: 'Execution risk',
+        description: 'Looks for operational constraints in the same document.',
+      },
+    ],
     generation_state: 'succeeded',
     created_at: '2026-05-05T00:00:00Z',
     updated_at: '2026-05-05T00:00:00Z',
     lens_results: [
       {
         id: 'lens-result-1',
-        lens: 'financial',
+        lens: 'Demand trend',
         generation_state: 'succeeded',
         error_message: null,
         suggestions: [
           {
             id: 'suggestion-1',
             analysis_run_id: 'run-1',
-            lens: 'financial',
+            lens: 'Demand trend',
             body: 'Capture the demand signal in the final memo.',
             review_state: 'unreviewed',
             created_at: '2026-05-05T00:00:00Z',
@@ -687,14 +1135,14 @@ it('accepts and discards AI suggestions from the persisted latest run while keep
       },
       {
         id: 'lens-result-2',
-        lens: 'real_estate',
+        lens: 'Execution risk',
         generation_state: 'succeeded',
         error_message: null,
         suggestions: [
           {
             id: 'suggestion-2',
             analysis_run_id: 'run-1',
-            lens: 'real_estate',
+            lens: 'Execution risk',
             body: 'Flag the zoning change as a local market constraint.',
             review_state: 'unreviewed',
             created_at: '2026-05-05T00:00:00Z',
@@ -716,20 +1164,22 @@ it('accepts and discards AI suggestions from the persisted latest run while keep
     id: 'run-1',
     project_id: 'project-1',
     resource_id: 'resource-1',
+    lens_discovery_status: 'queued',
+    discovered_lenses: [],
     generation_state: 'queued',
     created_at: '2026-05-05T00:00:00Z',
     updated_at: '2026-05-05T00:00:00Z',
     lens_results: [
       {
         id: 'lens-result-1',
-        lens: 'financial',
+        lens: 'Demand trend',
         generation_state: 'queued',
         error_message: null,
         suggestions: [],
       },
       {
         id: 'lens-result-2',
-        lens: 'real_estate',
+        lens: 'Execution risk',
         generation_state: 'queued',
         error_message: null,
         suggestions: [],
@@ -819,7 +1269,9 @@ it('accepts and discards AI suggestions from the persisted latest run while keep
   const notesPanel = await screen.findByRole('region', { name: 'Notes' });
   const suggestionsPanel = await screen.findByRole('region', { name: 'AI suggestions' });
 
-  fireEvent.click(within(suggestionsPanel).getByRole('button', { name: 'Run analysis' }));
+  fireEvent.click(
+    await within(suggestionsPanel).findByRole('button', { name: 'Run analysis' }),
+  );
 
   expect(
     await within(suggestionsPanel).findByText('Capture the demand signal in the final memo.'),

@@ -1,36 +1,23 @@
-import type { LensName } from '../lib/api';
-
-const LENS_LABELS: Record<LensName, string> = {
-  financial: 'Financial',
-  real_estate: 'Real estate',
-  political: 'Political',
-  software_engineering: 'Software engineering',
-};
+import type { DiscoveredLens } from '../lib/api';
 
 type LensPickerProps = {
-  selectedLenses: LensName[];
-  onToggleLens: (lens: LensName) => void;
-  disabled?: boolean;
+  discoveredLenses: DiscoveredLens[];
 };
 
-export function LensPicker({
-  selectedLenses,
-  onToggleLens,
-  disabled = false,
-}: LensPickerProps) {
+export function LensPicker({ discoveredLenses }: LensPickerProps) {
   return (
-    <fieldset disabled={disabled}>
-      <legend>Analysis lenses</legend>
-      {Object.entries(LENS_LABELS).map(([lens, label]) => (
-        <label key={lens}>
-          <input
-            type="checkbox"
-            checked={selectedLenses.includes(lens as LensName)}
-            onChange={() => onToggleLens(lens as LensName)}
-          />
-          {label}
-        </label>
-      ))}
-    </fieldset>
+    <section aria-label="Discovered analysis lenses">
+      <h3>Analysis lenses</h3>
+      <ul>
+        {discoveredLenses.map((lens) => (
+          <li key={lens.name}>
+            <p>
+              <strong>{lens.name}</strong>
+            </p>
+            <p>{lens.description}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

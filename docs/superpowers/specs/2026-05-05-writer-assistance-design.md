@@ -5,7 +5,7 @@ Status: Draft for user review
 
 ## Summary
 
-`writer-assistance` is a single-user web app for research-assisted writing. A user uploads markdown source documents into a project, reads them in a rendered workspace, creates quote-anchored notes, reviews visible AI-generated note suggestions from expert lenses, and curates an approved note set. The AI system then generates an initial report draft from the approved notes. The user edits that draft as paragraph blocks, can request tone alternatives or argumentative critique per block, and can export the final report as markdown.
+`writer-assistance` is a single-user web app for research-assisted writing. A user uploads markdown source documents into a project, reads them in a rendered workspace, creates quote-anchored notes, triggers AI analysis that first discovers document-specific expert lenses and then generates visible note suggestions, and curates an approved note set. The AI system then generates an initial report draft from the approved notes. The user edits that draft as paragraph blocks, can request tone alternatives or argumentative critique per block, and can export the final report as markdown.
 
 The first implementation slice focuses on the reading workspace and the domain model that supports later AI suggestion review, report generation, editing, and export. The recommended architecture is a modular monolith with asynchronous background jobs. In `v1`, persistence is disk-based behind a storage abstraction so the system can later evolve to object storage and caching without rewriting the application core.
 
@@ -77,12 +77,18 @@ The rendered document viewer is the authoritative reading surface in `v1`. The u
 ### AI Suggestions
 
 - AI-generated suggestions are visible first-class artifacts in the UI.
-- Suggestions are grouped by lens or expert persona, such as financial, real-estate, political, or software engineering.
+- Each resource's first analysis run discovers open-ended, document-specific expert lenses with a short name and description.
+- Discovered lenses are read-only in `v1`.
+- Suggestions are grouped by the discovered lenses for that run.
 - Each suggestion is tied back to source context so the user can inspect where it came from.
-- In `v1`, AI suggestion generation is explicitly user-triggered from the reading workspace for the current resource.
+- In `v1`, AI analysis is explicitly user-triggered from the reading workspace for the current resource.
+- The first run for a resource automatically performs lens discovery and then suggestion generation.
+- Subsequent lens regeneration is explicit through a separate user action.
 - Automatic project-wide suggestion generation is deferred.
+- The AI panel shows only the latest analysis run for the current resource.
 - User notes and AI suggestions stay separate by default.
 - Accepting a suggestion converts it into a user-owned note.
+- Accepted suggestions persist in the notes panel as normal user-owned notes even if a later run replaces the AI panel view.
 - The system preserves provenance so accepted notes can still be traced back to their AI origin.
 - Discarding a suggestion removes it from the active workflow but keeps a reversible record where practical.
 
@@ -165,10 +171,11 @@ The modular monolith should be organized around the following bounded areas:
 - `annotations`
   - store quote-anchored user notes and highlights
   - link notes to resource spans
-- `ai_suggestions`
-  - enqueue expert-lens analysis
-  - persist suggestions
-  - track suggestion state such as pending, ready, accepted, discarded, failed
+- `analysis_runs`
+  - discover document-specific expert lenses
+  - enqueue per-resource analysis runs
+  - persist discovered lenses and suggestions
+  - track lens discovery, generation, and review state
 - `reports`
   - generate AI-authored draft versions from user-owned notes
   - store report content and block structure
@@ -209,16 +216,38 @@ The modular monolith should be organized around the following bounded areas:
 - created_at
 - updated_at
 
+### Analysis Run
+
+- id
+- project_id
+- resource_id
+- lens_discovery_status (`queued`, `running`, `succeeded`, `failed`)
+- discovered_lenses (list of `{ name, description }`)
+- generation_status (`queued`, `running`, `succeeded`, `completed_with_failures`, `failed`, `cancelled`)
+- error_summary
+- created_at
+- updated_at
+
+### Analysis Run Lens Result
+
+- id
+- analysis_run_id
+- lens_name
+- generation_status (`queued`, `running`, `succeeded`, `failed`, `cancelled`)
+- failure_reason
+- created_at
+- updated_at
+
 ### AI Suggestion
 
 - id
+- analysis_run_lens_result_id or equivalent
 - project_id
 - resource_id
 - lens_name
 - source_context
 - suggestion_body
-- state (`pending`, `ready`, `accepted`, `discarded`, `failed`)
-- failure_reason
+- review_status (`unreviewed`, `accepted`, `discarded`)
 - created_at
 - updated_at
 
@@ -257,9 +286,16 @@ The modular monolith should be organized around the following bounded areas:
 
 ### AI Suggestion Review
 
-- AI suggestion generation runs asynchronously.
-- Suggestions appear in the notes review panel when ready.
-- Suggestions are filterable or groupable by expert lens.
+- Before the first run, the UI shows a single `Run analysis` action and no lens checklist.
+- When the first run starts, the UI progresses through `Discovering lenses...` and then `Generating suggestions...`.
+- AI suggestion generation runs asynchronously after lens discovery succeeds.
+- After discovery succeeds, the UI shows the discovered lenses as a read-only list with names and short descriptions.
+- Suggestions appear in the AI panel when ready.
+- Suggestions are filterable or groupable by discovered lens.
+- The AI panel always reflects only the latest analysis run for the selected resource.
+- If some lenses fail during suggestion generation, the UI exposes those failures and offers `Retry failed lenses`.
+- `Retry failed lenses` reuses the existing discovered lenses and reruns only failed suggestion generation.
+- `Regenerate lenses` creates a fresh run with new lens discovery and replaces the current AI panel view.
 - The user can inspect source context before taking action.
 - The user can:
   - accept a suggestion as-is
@@ -318,11 +354,14 @@ The output of these tools is presented as suggestions for the user to adopt or i
 ### AI Suggestion Flow
 
 1. User explicitly triggers AI analysis for the current resource from the reading workspace.
-2. Backend enqueues background suggestion jobs.
-3. Jobs persist ready suggestions when complete.
-4. User reviews suggestions.
-5. Accepting a suggestion creates or updates a user-owned note.
-6. Discarding changes only the suggestion state.
+2. Backend creates an analysis run and starts lens discovery if this is the first run for that resource or the user explicitly requested lens regeneration.
+3. On discovery success, backend persists the discovered lens names and descriptions, then starts per-lens suggestion generation.
+4. If discovery fails, the run records that failure and suggestion generation does not start.
+5. `GET /resources/{resource_id}/analysis-runs/latest` returns the latest run, including discovered lenses, per-lens generation status, and suggestions.
+6. User reviews only the latest run's suggestions in the AI panel.
+7. Accepting a suggestion creates or updates a user-owned note and keeps it visible in the notes panel even if later runs replace the AI panel view.
+8. `Retry failed lenses` reruns only failed suggestion generation against the existing discovered lenses.
+9. `Regenerate lenses` creates a fresh run with new discovery and replaces the active AI panel view for that resource.
 
 ### Report Flow
 
@@ -350,8 +389,10 @@ The output of these tools is presented as suggestions for the user to adopt or i
 
 ### AI Suggestion Failures
 
-- If an AI suggestion job fails, the failure is visible in the UI.
-- The UI offers an explicit retry action.
+- If lens discovery fails, the failure is visible in the UI and suggestion generation does not start.
+- If one or more discovered lenses fail during suggestion generation, those failures are visible in the UI.
+- The UI offers `Retry failed lenses` only for failed suggestion generation, without rediscovering lenses.
+- The UI offers an explicit `Regenerate lenses` action when the user wants a fresh discovered lens set.
 
 ### Report Generation Failures
 
@@ -371,8 +412,13 @@ The implementation plan should cover tests for:
 - markdown upload and folder-structure preservation
 - rendered resource viewing
 - quote-anchored annotation creation
+- first-run AI lens discovery
+- latest-run AI panel replacement behavior
+- retrying failed lenses without rediscovery
+- regenerating lenses with a fresh discovered lens set
 - AI suggestion persistence and state transitions
 - accepting and discarding AI suggestions
+- accepted AI notes persisting across later runs
 - report generation into a new version
 - stale report marking when notes change
 - markdown export of a selected report version
@@ -381,7 +427,7 @@ The implementation plan should cover tests for:
 
 - How best to map newly added notes to existing report blocks for surgical updates
 - Whether users need file-level or project-level notes in addition to quote-only notes
-- What specific expert-lens catalog ships first
+- Whether users should eventually edit, pin, or reuse discovered lens sets
 - Whether the editor should eventually support richer block types than paragraphs
 
 ## Implementation Guidance
@@ -399,7 +445,7 @@ The recommended sequence is:
 2. Implement project creation and markdown upload.
 3. Implement resource browsing and rendered reading.
 4. Implement quote-anchored user annotations.
-5. Implement AI suggestion job flow and review states.
+5. Implement AI lens discovery, suggestion job flow, and review states.
 6. Implement report generation and versioning.
 7. Implement block editor affordances and markdown export.
 

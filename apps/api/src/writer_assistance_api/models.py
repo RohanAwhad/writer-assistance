@@ -68,6 +68,8 @@ class AnalysisRun(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     resource_id: Mapped[str] = mapped_column(ForeignKey("resources.id"), index=True)
+    lens_discovery_status: Mapped[str] = mapped_column(String)
+    discovered_lenses: Mapped[list[dict[str, str]]] = mapped_column(JSON)
     generation_state: Mapped[str] = mapped_column(String)
     requested_lenses: Mapped[list[str]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

@@ -11,7 +11,12 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from writer_assistance_api.ai.anthropic_vertex_client import AnthropicVertexAiClient
-from writer_assistance_api.ai.client import AiClient, LensName, normalize_suggestion_drafts
+from writer_assistance_api.ai.client import (
+    AiClient,
+    AiSuggestionDraft,
+    DiscoveredLens,
+    normalize_suggestion_drafts,
+)
 from writer_assistance_api.ai.fake_client import SmokeAiClient
 from writer_assistance_api.config import Settings
 from writer_assistance_api.db import get_session
@@ -31,11 +36,15 @@ from writer_assistance_api.schemas.analysis_runs import (
     AnalysisRunGenerationState,
     AnalysisSuggestionResponse,
     CreateAnalysisRunRequest,
+    DiscoveredLensResponse,
+    LensDiscoveryState,
     SuggestionReviewState,
     SuggestionEnvelope,
 )
 from writer_assistance_api.schemas.annotations import AnnotationResponse, QuoteAnchor, ResolutionStatus
 from writer_assistance_api.storage import StorageDriver
+
+DISCOVERY_FAILURE_ERROR_SUMMARY = "Lens discovery failed. Regenerate lenses to try again."
 
 
 class AnalysisRunsService:
@@ -69,25 +78,14 @@ class AnalysisRunsService:
             id=str(uuid4()),
             project_id=project_id,
             resource_id=resource.id,
+            lens_discovery_status="queued",
+            discovered_lenses=[],
             generation_state="queued",
-            requested_lenses=list(payload.lenses),
+            requested_lenses=[],
             created_at=now,
             updated_at=now,
         )
-        lens_results = [
-            AnalysisRunLensResult(
-                id=str(uuid4()),
-                analysis_run_id=run.id,
-                lens=lens,
-                generation_state="queued",
-                error_message=None,
-                created_at=now,
-                updated_at=now,
-            )
-            for lens in payload.lenses
-        ]
         self._session.add(run)
-        self._session.add_all(lens_results)
         self._session.commit()
         return self._serialize_run(run)
 
@@ -110,8 +108,34 @@ class AnalysisRunsService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis run not found")
         return self._serialize_run(latest_run)
 
+    def regenerate_lenses(self, resource_id: str) -> AnalysisRunDetailResponse:
+        resource = self._session.get(Resource, resource_id)
+        if resource is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+
+        now = datetime.now(UTC)
+        run = AnalysisRun(
+            id=str(uuid4()),
+            project_id=resource.project_id,
+            resource_id=resource.id,
+            lens_discovery_status="queued",
+            discovered_lenses=[],
+            generation_state="queued",
+            requested_lenses=[],
+            created_at=now,
+            updated_at=now,
+        )
+        self._session.add(run)
+        self._session.commit()
+        return self._serialize_run(run)
+
     def retry_analysis_run(self, analysis_run_id: str) -> AnalysisRunDetailResponse:
         run = self._get_analysis_run_or_404(analysis_run_id)
+        if _is_analysis_run_active(run):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Analysis run is still active",
+            )
         all_lens_results = self._ordered_lens_results(run)
         failed_lens_results = [
             lens_result for lens_result in all_lens_results if lens_result.generation_state == "failed"
@@ -131,6 +155,14 @@ class AnalysisRunsService:
     def cancel_analysis_run(self, analysis_run_id: str) -> AnalysisRunDetailResponse:
         run = self._get_analysis_run_or_404(analysis_run_id)
         all_lens_results = self._ordered_lens_results(run)
+        if (
+            not all_lens_results
+            and run.lens_discovery_status in {"queued", "running"}
+            and run.generation_state in {"queued", "running"}
+        ):
+            self._cancel_discovery_phase_run(run)
+            return self._serialize_run(run)
+
         cancellable_lens_results = [
             lens_result
             for lens_result in all_lens_results
@@ -151,16 +183,102 @@ class AnalysisRunsService:
 
     def process_analysis_run(self, analysis_run_id: str) -> None:
         run = self._get_analysis_run_or_404(analysis_run_id)
+        if run.generation_state == "cancelled":
+            self._cohere_cancelled_discovery_status(run)
+            return
         resource = self._get_resource_for_run(run)
+        if self._ai_client is None:
+            raise RuntimeError("AI client is required to process analysis runs")
+
+        try:
+            markdown = self._read_markdown_resource(resource)
+        except Exception as exc:
+            message = str(exc) or exc.__class__.__name__
+            if run.lens_discovery_status == "queued":
+                run.lens_discovery_status = "failed"
+                run.generation_state = "failed"
+                run.updated_at = datetime.now(UTC)
+                self._session.commit()
+                return
+
+            all_lens_results = self._ordered_lens_results(run)
+            lens_results_to_process = [
+                lens_result for lens_result in all_lens_results if lens_result.generation_state == "queued"
+            ]
+            self._mark_processing_failure(
+                run=run,
+                lens_results=lens_results_to_process,
+                all_lens_results=all_lens_results,
+                message=message,
+            )
+            return
+
+        self._session.refresh(run)
+        if run.generation_state == "cancelled":
+            self._cohere_cancelled_discovery_status(run)
+            return
+        if run.lens_discovery_status == "queued":
+            run.lens_discovery_status = "running"
+            run.generation_state = "running"
+            run.updated_at = datetime.now(UTC)
+            self._session.commit()
+            self._session.refresh(run)
+            if run.generation_state == "cancelled":
+                self._cohere_cancelled_discovery_status(run)
+                return
+
+            try:
+                discovered_lenses = self._ai_client.discover_lenses(
+                    markdown=markdown,
+                    logical_path=resource.logical_path,
+                )
+                discovered_lenses = _normalize_discovered_lenses(discovered_lenses)
+                if not discovered_lenses:
+                    raise RuntimeError("Lens discovery returned no usable lenses")
+            except Exception as exc:
+                run.lens_discovery_status = "failed"
+                run.generation_state = "failed"
+                run.updated_at = datetime.now(UTC)
+                self._session.commit()
+                return
+
+            self._session.refresh(run)
+            if run.generation_state == "cancelled":
+                self._cohere_cancelled_discovery_status(run)
+                return
+            now = datetime.now(UTC)
+            run.discovered_lenses = [lens.model_dump(mode="python") for lens in discovered_lenses]
+            run.requested_lenses = [lens.name for lens in discovered_lenses]
+            run.lens_discovery_status = "succeeded"
+            run.generation_state = "queued"
+            run.updated_at = now
+            self._session.add_all(
+                AnalysisRunLensResult(
+                    id=str(uuid4()),
+                    analysis_run_id=run.id,
+                    lens=lens.name,
+                    generation_state="queued",
+                    error_message=None,
+                    created_at=now,
+                    updated_at=now,
+                )
+                for lens in discovered_lenses
+            )
+            self._session.commit()
+
+        discovered_lenses = [
+            DiscoveredLens.model_validate(lens)
+            for lens in run.discovered_lenses
+        ]
+        lens_descriptions = {lens.name: lens.description for lens in discovered_lenses}
         all_lens_results = self._ordered_lens_results(run)
         lens_results_to_process = [
             lens_result for lens_result in all_lens_results if lens_result.generation_state == "queued"
         ]
         if not lens_results_to_process:
             return
-
-        if self._ai_client is None:
-            raise RuntimeError("AI client is required to process analysis runs")
+        if run.generation_state == "cancelled":
+            return
 
         run.generation_state = "running"
         run.updated_at = datetime.now(UTC)
@@ -170,25 +288,19 @@ class AnalysisRunsService:
             lens_result.updated_at = datetime.now(UTC)
         self._session.commit()
 
-        try:
-            markdown = self._read_markdown_resource(resource)
-        except Exception as exc:
-            self._mark_processing_failure(
-                run=run,
-                lens_results=lens_results_to_process,
-                all_lens_results=all_lens_results,
-                message=str(exc) or exc.__class__.__name__,
-            )
-            return
-
         for lens_result in lens_results_to_process:
             self._session.refresh(run)
             self._session.refresh(lens_result)
             if lens_result.generation_state == "cancelled":
                 continue
             try:
+                lens_description = lens_descriptions.get(lens_result.lens)
+                if lens_description is None:
+                    raise RuntimeError(f"Missing discovered lens metadata for {lens_result.lens}")
+
                 raw_suggestions = self._ai_client.analyze_resource(
-                    lens=cast(LensName, lens_result.lens),
+                    lens_name=lens_result.lens,
+                    lens_description=lens_description,
                     markdown=markdown,
                     logical_path=resource.logical_path,
                 )
@@ -281,6 +393,19 @@ class AnalysisRunsService:
         run.updated_at = datetime.now(UTC)
         self._session.commit()
 
+    def _cancel_discovery_phase_run(self, run: AnalysisRun) -> None:
+        run.lens_discovery_status = "cancelled"
+        run.generation_state = "cancelled"
+        run.updated_at = datetime.now(UTC)
+        self._session.commit()
+
+    def _cohere_cancelled_discovery_status(self, run: AnalysisRun) -> None:
+        if run.lens_discovery_status not in {"queued", "running"}:
+            return
+        run.lens_discovery_status = "cancelled"
+        run.updated_at = datetime.now(UTC)
+        self._session.commit()
+
     def _build_suggestion(
         self,
         *,
@@ -328,11 +453,17 @@ class AnalysisRunsService:
             id=run.id,
             project_id=run.project_id,
             resource_id=run.resource_id,
+            lens_discovery_status=cast(LensDiscoveryState, run.lens_discovery_status),
+            discovered_lenses=[
+                DiscoveredLensResponse.model_validate(lens)
+                for lens in run.discovered_lenses
+            ],
             generation_state=cast(AnalysisRunGenerationState, run.generation_state),
+            error_summary=_run_error_summary(run),
             lens_results=[
                 AnalysisLensResultResponse(
                     id=lens_result.id,
-                    lens=cast(LensName, lens_result.lens),
+                    lens=lens_result.lens,
                     generation_state=cast(AnalysisLensGenerationState, lens_result.generation_state),
                     error_message=lens_result.error_message,
                     suggestions=[
@@ -350,7 +481,7 @@ class AnalysisRunsService:
         return AnalysisSuggestionResponse(
             id=suggestion.id,
             analysis_run_id=suggestion.analysis_run_id,
-            lens=cast(LensName, suggestion.lens),
+            lens=suggestion.lens,
             body=suggestion.body,
             review_state=cast(SuggestionReviewState, suggestion.review_state),
             created_at=_coerce_utc(suggestion.created_at),
@@ -371,7 +502,10 @@ class AnalysisRunsService:
                 select(AnalysisRunLensResult).where(AnalysisRunLensResult.analysis_run_id == run.id)
             )
         )
-        lens_order = {lens: index for index, lens in enumerate(run.requested_lenses)}
+        ordered_lenses = run.requested_lenses or [
+            lens["name"] for lens in run.discovered_lenses if "name" in lens
+        ]
+        lens_order = {lens: index for index, lens in enumerate(ordered_lenses)}
         lens_results.sort(key=lambda lens_result: lens_order.get(lens_result.lens, len(lens_order)))
         return lens_results
 
@@ -427,6 +561,18 @@ def _run_generation_state(
     return "completed_with_failures"
 
 
+def _is_analysis_run_active(run: AnalysisRun) -> bool:
+    if run.lens_discovery_status in {"queued", "running"}:
+        return True
+    return run.lens_discovery_status == "succeeded" and run.generation_state in {"queued", "running"}
+
+
+def _run_error_summary(run: AnalysisRun) -> str | None:
+    if run.lens_discovery_status == "failed":
+        return DISCOVERY_FAILURE_ERROR_SUMMARY
+    return None
+
+
 def _canonicalize_anchor(anchor: QuoteAnchor) -> QuoteAnchor:
     quote_text = anchor.quote_text.strip()
     if not quote_text:
@@ -447,6 +593,23 @@ def _canonicalize_anchor(anchor: QuoteAnchor) -> QuoteAnchor:
 
 def _normalize_quote_text(quote_text: str) -> str:
     return " ".join(quote_text.split()).lower()
+
+
+def _normalize_discovered_lenses(discovered_lenses: Sequence[DiscoveredLens]) -> list[DiscoveredLens]:
+    normalized_lenses: list[DiscoveredLens] = []
+    seen_names: set[str] = set()
+    for lens in discovered_lenses:
+        normalized_name = lens.name.strip()
+        normalized_description = lens.description.strip()
+        if not normalized_name or not normalized_description:
+            continue
+        if normalized_name in seen_names:
+            continue
+        seen_names.add(normalized_name)
+        normalized_lenses.append(
+            DiscoveredLens(name=normalized_name, description=normalized_description)
+        )
+    return normalized_lenses
 
 
 def _coerce_utc(value: datetime) -> datetime:
@@ -515,5 +678,23 @@ class _FailingAiClient:
     def __init__(self, message: str) -> None:
         self._message = message
 
-    def analyze_resource(self, **_: Any) -> list[Any]:
+    def discover_lenses(
+        self,
+        *,
+        markdown: str,
+        logical_path: str,
+    ) -> list[DiscoveredLens]:
+        del markdown, logical_path
+        raise RuntimeError(self._message)
+
+    def analyze_resource(
+        self,
+        *,
+        markdown: str,
+        logical_path: str,
+        lens_name: str | None = None,
+        lens_description: str | None = None,
+        lens: str | None = None,
+    ) -> list[AiSuggestionDraft]:
+        del markdown, logical_path, lens_name, lens_description, lens
         raise RuntimeError(self._message)

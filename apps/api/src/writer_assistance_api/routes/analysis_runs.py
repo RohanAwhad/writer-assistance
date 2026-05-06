@@ -48,6 +48,18 @@ def get_latest_analysis_run_for_resource(
     return service.get_latest_analysis_run_for_resource(resource_id)
 
 
+@router.post("/resources/{resource_id}/analysis-runs/regenerate-lenses", status_code=status.HTTP_202_ACCEPTED)
+def regenerate_lenses(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    resource_id: str,
+    service: Annotated[AnalysisRunsService, Depends(get_analysis_runs_service)],
+) -> AnalysisRunDetailResponse:
+    queued_run = service.regenerate_lenses(resource_id)
+    background_tasks.add_task(process_analysis_run_in_background, request.app, queued_run.id)
+    return queued_run
+
+
 @router.post("/analysis-runs/{analysis_run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
 def retry_analysis_run(
     request: Request,

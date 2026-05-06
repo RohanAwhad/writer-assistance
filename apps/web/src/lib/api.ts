@@ -3,13 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QuoteAnchor } from './selection-anchor';
 
 export type { QuoteAnchor } from './selection-anchor';
-export const LENS_CATALOG = [
-  'financial',
-  'real_estate',
-  'political',
-  'software_engineering',
-] as const;
-export type LensName = (typeof LENS_CATALOG)[number];
 
 export type CreateProjectInput = {
   title: string;
@@ -79,6 +72,13 @@ export type AnalysisRunGenerationState =
   | 'failed'
   | 'cancelled';
 
+export type LensDiscoveryState =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled';
+
 export type AnalysisLensGenerationState =
   | 'queued'
   | 'running'
@@ -88,10 +88,15 @@ export type AnalysisLensGenerationState =
 
 export type SuggestionReviewState = 'unreviewed' | 'accepted' | 'discarded';
 
+export type DiscoveredLens = {
+  name: string;
+  description: string;
+};
+
 export type AnalysisSuggestion = {
   id: string;
   analysis_run_id: string;
-  lens: LensName;
+  lens: string;
   body: string;
   review_state: SuggestionReviewState;
   created_at: string;
@@ -101,7 +106,7 @@ export type AnalysisSuggestion = {
 
 export type AnalysisLensResult = {
   id: string;
-  lens: LensName;
+  lens: string;
   generation_state: AnalysisLensGenerationState;
   error_message: string | null;
   suggestions: AnalysisSuggestion[];
@@ -111,7 +116,10 @@ export type AnalysisRun = {
   id: string;
   project_id: string;
   resource_id: string;
+  lens_discovery_status: LensDiscoveryState;
+  discovered_lenses: DiscoveredLens[];
   generation_state: AnalysisRunGenerationState;
+  error_summary: string | null;
   lens_results: AnalysisLensResult[];
   created_at: string;
   updated_at: string;
@@ -119,7 +127,6 @@ export type AnalysisRun = {
 
 export type CreateAnalysisRunInput = {
   resource_id: string;
-  lenses: LensName[];
 };
 
 export type AcceptAnalysisSuggestionResponse = {
@@ -258,6 +265,18 @@ export async function createAnalysisRun(
   return (await response.json()) as AnalysisRun;
 }
 
+export async function regenerateLenses(resourceId: string): Promise<AnalysisRun> {
+  const response = await fetch(`/api/resources/${resourceId}/analysis-runs/regenerate-lenses`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to regenerate lenses');
+  }
+
+  return (await response.json()) as AnalysisRun;
+}
+
 export async function getLatestAnalysisRun(resourceId: string): Promise<AnalysisRun | null> {
   const response = await fetch(`/api/resources/${resourceId}/analysis-runs/latest`);
 
@@ -272,13 +291,36 @@ export async function getLatestAnalysisRun(resourceId: string): Promise<Analysis
   return (await response.json()) as AnalysisRun;
 }
 
+export function isLensDiscoveryActive(analysisRun: AnalysisRun | null | undefined): boolean {
+  return (
+    analysisRun?.lens_discovery_status === 'queued' ||
+    analysisRun?.lens_discovery_status === 'running'
+  );
+}
+
+export function isSuggestionGenerationActive(analysisRun: AnalysisRun | null | undefined): boolean {
+  return (
+    analysisRun?.lens_discovery_status === 'succeeded' &&
+    (analysisRun.generation_state === 'queued' || analysisRun.generation_state === 'running')
+  );
+}
+
+export function isAnalysisRunActive(analysisRun: AnalysisRun | null | undefined): boolean {
+  return isLensDiscoveryActive(analysisRun) || isSuggestionGenerationActive(analysisRun);
+}
+
+export function canRetryAnalysisRun(analysisRun: AnalysisRun | null | undefined): boolean {
+  if (!analysisRun || isAnalysisRunActive(analysisRun)) {
+    return false;
+  }
+
+  return analysisRun.lens_results.some((lensResult) => lensResult.generation_state === 'failed');
+}
+
 export function getLatestAnalysisRunPollIntervalMs(
   analysisRun: AnalysisRun | null | undefined,
 ): number | false {
-  if (
-    analysisRun?.generation_state === 'queued' ||
-    analysisRun?.generation_state === 'running'
-  ) {
+  if (isAnalysisRunActive(analysisRun)) {
     return ANALYSIS_RUN_POLL_INTERVAL_MS;
   }
 
@@ -440,6 +482,23 @@ export function useCreateAnalysisRunMutation(projectId: string | undefined) {
 
       return createAnalysisRun(projectId, input);
     },
+    onSuccess: async (analysisRun) => {
+      queryClient.setQueryData<AnalysisRun | null>(
+        latestAnalysisRunQueryKey(analysisRun.resource_id),
+        analysisRun,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: latestAnalysisRunQueryKey(analysisRun.resource_id),
+      });
+    },
+  });
+}
+
+export function useRegenerateLensesMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: regenerateLenses,
     onSuccess: async (analysisRun) => {
       queryClient.setQueryData<AnalysisRun | null>(
         latestAnalysisRunQueryKey(analysisRun.resource_id),

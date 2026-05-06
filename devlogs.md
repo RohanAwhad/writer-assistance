@@ -121,3 +121,8 @@
 - Task 6 progress: added explicit AI analysis runs, per-lens suggestion persistence/review state, suggestion accept/discard flows, and a reading-workspace UI for running and reviewing AI suggestions.
 - Task 7 progress: added a Playwright smoke test for the reading-workspace flow, root smoke/e2e scripts plus `playwright.config.ts`, and a deterministic `WRITER_ASSISTANCE_AI_MODE=smoke` backend path for browser coverage.
 - Task 7 progress: documented the developer runbook in `README.md` and added `Makefile` targets for smoke setup, smoke execution, and full verification.
+
+## 2026-05-06
+
+### Implementation Progress
+- Task 8 progress: replaced the fixed lens checklist with AI-discovered document-specific lenses, first-run discovery, explicit regeneration, retry without rediscovery, and latest-run-only AI panel behavior while accepted notes remain in the notes panel.

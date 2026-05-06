@@ -4,42 +4,73 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from writer_assistance_api.ai.client import (
-    LENS_CATALOG,
     AiSuggestionDraft,
     AiSuggestionDraftLike,
-    LensName,
+    DiscoveredLens,
     normalize_suggestion_drafts,
+    resolve_analysis_lens,
 )
 from writer_assistance_api.schemas.annotations import QuoteAnchor
 
 SMOKE_SUGGESTION_BODY = "Highlight the demand trend as evidence for pricing power."
+SMOKE_DISCOVERED_LENSES = [
+    DiscoveredLens(
+        name="Demand trend",
+        description="Highlights pricing power and revenue implications in the current resource.",
+    )
+]
 
 
 class FakeAiClient:
     def __init__(
         self,
-        outcomes_by_lens: Mapping[LensName, Sequence[Sequence[AiSuggestionDraftLike] | Exception]] | None = None,
+        *,
+        discovered_lenses: Sequence[DiscoveredLens] | None = None,
+        outcomes_by_lens: Mapping[str, Sequence[Sequence[AiSuggestionDraftLike] | Exception]] | None = None,
     ) -> None:
-        self._outcomes_by_lens = {
-            lens: list(outcomes_by_lens.get(lens, [])) for lens in LENS_CATALOG
-        } if outcomes_by_lens is not None else {lens: [] for lens in LENS_CATALOG}
+        self._discovered_lenses = list(discovered_lenses or [])
+        self._outcomes_by_lens = {key: list(value) for key, value in (outcomes_by_lens or {}).items()}
         self.calls: list[dict[str, Any]] = []
 
-    def analyze_resource(
+    def discover_lenses(
         self,
         *,
-        lens: LensName,
         markdown: str,
         logical_path: str,
-    ) -> list[AiSuggestionDraft]:
+    ) -> list[DiscoveredLens]:
         self.calls.append(
             {
-                "lens": lens,
+                "kind": "discover",
                 "markdown": markdown,
                 "logical_path": logical_path,
             }
         )
-        outcomes = self._outcomes_by_lens.get(lens)
+        return list(self._discovered_lenses)
+
+    def analyze_resource(
+        self,
+        *,
+        markdown: str,
+        logical_path: str,
+        lens_name: str | None = None,
+        lens_description: str | None = None,
+        lens: str | None = None,
+    ) -> list[AiSuggestionDraft]:
+        resolved_lens_name, resolved_lens_description = resolve_analysis_lens(
+            lens_name=lens_name,
+            lens_description=lens_description,
+            lens=lens,
+        )
+        self.calls.append(
+            {
+                "kind": "analyze",
+                "lens_name": resolved_lens_name,
+                "lens_description": resolved_lens_description,
+                "markdown": markdown,
+                "logical_path": logical_path,
+            }
+        )
+        outcomes = self._outcomes_by_lens.get(resolved_lens_name)
         if not outcomes:
             return []
 
@@ -50,15 +81,31 @@ class FakeAiClient:
 
 
 class SmokeAiClient:
+    def discover_lenses(
+        self,
+        *,
+        markdown: str,
+        logical_path: str,
+    ) -> list[DiscoveredLens]:
+        del markdown, logical_path
+        return list(SMOKE_DISCOVERED_LENSES)
+
     def analyze_resource(
         self,
         *,
-        lens: LensName,
         markdown: str,
         logical_path: str,
+        lens_name: str | None = None,
+        lens_description: str | None = None,
+        lens: str | None = None,
     ) -> list[AiSuggestionDraft]:
+        resolved_lens_name, _ = resolve_analysis_lens(
+            lens_name=lens_name,
+            lens_description=lens_description,
+            lens=lens,
+        )
         del logical_path
-        if lens != "financial":
+        if resolved_lens_name not in {"financial", SMOKE_DISCOVERED_LENSES[0].name}:
             return []
 
         paragraph = _first_non_heading_paragraph(markdown)

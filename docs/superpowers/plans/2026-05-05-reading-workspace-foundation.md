@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a working single-user vertical slice that lets the user create projects, upload markdown resources, read them in a rendered workspace, create quote-anchored notes, and trigger/review visible AI suggestions for the current resource.
+**Goal:** Build a working single-user vertical slice that lets the user create projects, upload markdown resources, read them in a rendered workspace, create quote-anchored notes, and trigger/review visible AI suggestions for the current resource after the AI first discovers document-specific analysis lenses.
 
-**Architecture:** Use a Python backend in `apps/api` and a React/TypeScript frontend in `apps/web`. The backend exposes a typed JSON API with FastAPI, persists metadata in SQLite via SQLAlchemy 2.0, stores uploaded markdown files on local disk behind a storage abstraction, and runs AI analysis as explicit background analysis runs with per-lens status tracking.
+**Architecture:** Use a Python backend in `apps/api` and a React/TypeScript frontend in `apps/web`. The backend exposes a typed JSON API with FastAPI, persists metadata in SQLite via SQLAlchemy 2.0, stores uploaded markdown files on local disk behind a storage abstraction, and runs AI analysis as explicit background analysis runs with lens discovery status, discovered lens metadata, and per-lens status tracking.
 
 **Tech Stack:** Python 3.12, `uv`, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, pytest, mypy, `anthropic[vertex]`, React, Vite, TypeScript, React Router, TanStack Query, Vitest, Testing Library, Playwright
 
@@ -19,7 +19,8 @@ This plan intentionally covers only the first executable slice of the approved s
   - markdown upload with folder-path preservation
   - rendered reading workspace
   - quote-anchored user notes
-  - user-triggered AI suggestion analysis
+  - user-triggered AI suggestion analysis with first-run lens discovery
+  - latest-run-only AI suggestion panel behavior
   - suggestion accept and discard flows
 - deferred to a follow-on plan
   - AI-authored draft generation
@@ -36,11 +37,13 @@ This plan intentionally covers only the first executable slice of the approved s
 - AI analysis uses the Anthropic Vertex Python SDK via `from anthropic import AnthropicVertex`.
 - The analysis model is fixed to `claude-sonnet-4-5@20250929`.
 - The backend reads `ANTHROPIC_VERTEX_PROJECT_ID` and `CLOUD_ML_REGION` from the environment for Vertex configuration.
-- The initial lens catalog is fixed to:
-  - `financial`
-  - `real_estate`
-  - `political`
-  - `software_engineering`
+- The lens set is open-ended and discovered from the current resource content.
+- The first analysis run for a resource discovers lenses and then immediately generates suggestions from them.
+- Discovered lenses are read-only in `v1`.
+- `Regenerate lenses` always creates a fresh run with fresh discovery.
+- `Retry failed lenses` reruns only failed suggestion generation and does not rediscover lenses.
+- The AI panel always renders only the latest analysis run for the selected resource.
+- Accepted AI suggestions persist as user-owned notes even when a later run replaces the AI panel view.
 - Quote anchors use this minimum schema:
   - `quoteText`
   - `normalizedText`
@@ -49,6 +52,7 @@ This plan intentionally covers only the first executable slice of the approved s
   - `blockPath`
   - `resolutionStatus` (`exact | fuzzy | unresolved`)
 - Suggestion generation state is tracked separately from user review state:
+  - lens discovery state: `queued | running | succeeded | failed`
   - analysis run generation state: `queued | running | succeeded | completed_with_failures | failed | cancelled`
   - per-lens generation state: `queued | running | succeeded | failed | cancelled`
   - suggestion review state: `unreviewed | accepted | discarded`
@@ -73,8 +77,10 @@ This plan intentionally covers only the first executable slice of the approved s
 - `apps/api/alembic/env.py`
 - `apps/api/alembic/versions/0001_create_projects.py`
 - `apps/api/alembic/versions/0002_create_resources.py`
-- `apps/api/alembic/versions/0003_create_annotations.py`
-- `apps/api/alembic/versions/0004_create_analysis_runs.py`
+- `apps/api/alembic/versions/0003_enforce_resource_logical_path_uniqueness.py`
+- `apps/api/alembic/versions/0004_create_annotations.py`
+- `apps/api/alembic/versions/0005_create_analysis_runs.py`
+- `apps/api/alembic/versions/0006_add_lens_discovery_to_analysis_runs.py`
 - `apps/api/src/writer_assistance_api/__init__.py`
 - `apps/api/src/writer_assistance_api/main.py`
 - `apps/api/src/writer_assistance_api/app.py`
@@ -810,7 +816,7 @@ git commit -m "feat: add rendered reading workspace"
 ## Task 5: Add Quote-Anchored User Notes
 
 **Files:**
-- Create: `apps/api/alembic/versions/0003_create_annotations.py`
+- Create: `apps/api/alembic/versions/0004_create_annotations.py`
 - Create: `apps/api/src/writer_assistance_api/schemas/annotations.py`
 - Create: `apps/api/src/writer_assistance_api/services/annotations.py`
 - Create: `apps/api/src/writer_assistance_api/routes/annotations.py`
@@ -906,7 +912,7 @@ def create_annotation(
 ```
 
 ```python
-# apps/api/alembic/versions/0003_create_annotations.py
+# apps/api/alembic/versions/0004_create_annotations.py
 def upgrade() -> None:
     op.create_table(
         "annotations",
@@ -977,346 +983,172 @@ Expected: PASS with quote anchors persisted, notes visible in the UI, and mypy c
 ```
 
 ```bash
-git add apps/api/alembic/versions/0003_create_annotations.py apps/api/src/writer_assistance_api/schemas/annotations.py apps/api/src/writer_assistance_api/services/annotations.py apps/api/src/writer_assistance_api/routes/annotations.py apps/api/src/writer_assistance_api/models.py apps/api/tests/test_annotations_api.py apps/web/src/lib/selection-anchor.ts apps/web/src/components/annotation-composer.tsx apps/web/src/components/notes-panel.tsx apps/web/src/routes/project.tsx devlogs.md
+git add apps/api/alembic/versions/0004_create_annotations.py apps/api/src/writer_assistance_api/schemas/annotations.py apps/api/src/writer_assistance_api/services/annotations.py apps/api/src/writer_assistance_api/routes/annotations.py apps/api/src/writer_assistance_api/models.py apps/api/tests/test_annotations_api.py apps/web/src/lib/selection-anchor.ts apps/web/src/components/annotation-composer.tsx apps/web/src/components/notes-panel.tsx apps/web/src/routes/project.tsx devlogs.md
 git commit -m "feat: add quote-anchored user notes"
 ```
 
-## Task 6: Add Explicit AI Analysis Runs And Suggestion Review
+## Task 6: Add AI Lens Discovery And Latest-Run Suggestion Review
 
 **Files:**
-- Modify: `apps/api/pyproject.toml`
-- Modify: `apps/api/src/writer_assistance_api/config.py`
-- Create: `apps/api/alembic/versions/0004_create_analysis_runs.py`
-- Create: `apps/api/src/writer_assistance_api/background.py`
-- Create: `apps/api/src/writer_assistance_api/ai/client.py`
-- Create: `apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py`
-- Create: `apps/api/src/writer_assistance_api/ai/fake_client.py`
-- Create: `apps/api/src/writer_assistance_api/schemas/analysis_runs.py`
-- Create: `apps/api/src/writer_assistance_api/services/analysis_runs.py`
-- Create: `apps/api/src/writer_assistance_api/routes/analysis_runs.py`
+- Create: `apps/api/alembic/versions/0006_add_lens_discovery_to_analysis_runs.py`
+- Modify: `apps/api/src/writer_assistance_api/ai/client.py`
+- Modify: `apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py`
+- Modify: `apps/api/src/writer_assistance_api/ai/fake_client.py`
+- Modify: `apps/api/src/writer_assistance_api/schemas/analysis_runs.py`
+- Modify: `apps/api/src/writer_assistance_api/services/analysis_runs.py`
+- Modify: `apps/api/src/writer_assistance_api/routes/analysis_runs.py`
 - Modify: `apps/api/src/writer_assistance_api/models.py`
-- Modify: `apps/api/src/writer_assistance_api/app.py`
-- Create: `apps/api/tests/test_analysis_runs_api.py`
-- Create: `apps/web/src/components/lens-picker.tsx`
-- Create: `apps/web/src/components/ai-suggestions-panel.tsx`
+- Modify: `apps/api/tests/test_analysis_runs_api.py`
+- Modify: `apps/web/src/components/lens-picker.tsx`
+- Modify: `apps/web/src/components/ai-suggestions-panel.tsx`
 - Modify: `apps/web/src/routes/project.tsx`
+- Modify: `apps/web/src/routes/project.test.tsx`
 - Modify: `apps/web/src/lib/api.ts`
 
-- [ ] **Step 1: Write the failing analysis-run test with partial lens failure**
+- [ ] **Step 1: Write failing tests for discovery-first analysis**
 
 ```python
 # apps/api/tests/test_analysis_runs_api.py
-from fastapi.testclient import TestClient
-
-from writer_assistance_api.ai.fake_client import FakeAiClient
-from writer_assistance_api.app import create_app
-
-
-def test_analysis_run_keeps_generation_and_review_state_separate(tmp_path) -> None:
-    client = TestClient(
-        create_app(
-            database_url="sqlite+pysqlite:///:memory:",
-            storage_root=tmp_path / "storage",
-            ai_client=FakeAiClient(
-                {
-                    "financial": [{"source_context": "Demand is rising.", "suggestion_body": "Check whether rents justify this claim."}],
-                    "political": RuntimeError("provider timeout"),
-                }
-            ),
-        )
-    )
-
-    project = client.post("/projects", json={"title": "Housing Memo"}).json()
-    resource = client.post(
-        f"/projects/{project['id']}/resources/upload",
-        files=[("files", ("market.md", b"# Market\n\nDemand is rising.", "text/markdown"))],
-        data=[("paths", "research/market.md")],
-    ).json()["resources"][0]
-
+def test_first_run_discovers_lenses_and_generates_suggestions(tmp_path) -> None:
+    ...
     create_response = client.post(
-        f"/projects/{project['id']}/analysis-runs",
-        json={"resource_id": resource["id"], "lenses": ["financial", "political"]},
+        f"/projects/{project_id}/analysis-runs",
+        json={"resource_id": resource_id},
     )
+    run = client.get(f"/analysis-runs/{create_response.json()['id']}").json()
 
-    assert create_response.status_code == 202
+    assert run["lens_discovery_status"] == "succeeded"
+    assert run["discovered_lenses"] == [
+        {"name": "Market Timing", "description": "Examines whether the document's market claims are time-sensitive."}
+    ]
+    assert run["suggestions"][0]["review_status"] == "unreviewed"
 
-    run_response = client.get(f"/analysis-runs/{create_response.json()['id']}")
-    assert run_response.status_code == 200
-    assert run_response.json()["generation_status"] == "completed_with_failures"
-    assert run_response.json()["lenses"][0]["generation_status"] == "succeeded"
-    assert run_response.json()["lenses"][1]["generation_status"] == "failed"
-    assert run_response.json()["suggestions"][0]["review_status"] == "unreviewed"
+
+def test_regenerate_lenses_replaces_latest_run_but_accepted_notes_persist(tmp_path) -> None:
+    ...
+    regenerate_response = client.post(
+        f"/resources/{resource_id}/analysis-runs/regenerate-lenses",
+    )
+    latest = client.get(f"/resources/{resource_id}/analysis-runs/latest").json()
+
+    assert latest["id"] == regenerate_response.json()["id"]
+    assert latest["discovered_lenses"] != first_run["discovered_lenses"]
+    assert client.get(f"/resources/{resource_id}/annotations").json()["items"]
 ```
 
-- [ ] **Step 2: Run the analysis test to verify it fails**
+Also add targeted coverage that:
+- `POST /analysis-runs/{run_id}/retry` reuses the existing discovered lenses instead of calling discovery again.
+- `GET /resources/{resource_id}/analysis-runs/latest` switches the AI panel payload to the newest run after regeneration.
+
+- [ ] **Step 2: Run the targeted analysis tests to verify they fail**
 
 Run: `uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q`
 
-Expected: FAIL because no analysis-run models, routes, or AI client exist yet.
+Expected: FAIL because the current contracts still expect explicit lens selection and do not support discovery metadata or regeneration.
 
-- [ ] **Step 3: Implement typed AI clients, models, and status-tracking schemas**
-
-```toml
-# apps/api/pyproject.toml
-[project]
-dependencies = [
-  "alembic>=1.14.0",
-  "anthropic[vertex]>=0.39.0",
-  "fastapi>=0.115.0",
-  "sqlalchemy>=2.0.36",
-  "uvicorn>=0.30.0",
-]
-```
+- [ ] **Step 3: Extend the backend contract for discovered lenses**
 
 ```python
 # apps/api/src/writer_assistance_api/ai/client.py
-from typing import Literal, Protocol, TypedDict
-
-
-LensName = Literal["financial", "real_estate", "political", "software_engineering"]
-
-
-class AiSuggestionDraft(TypedDict):
-    source_context: str
-    suggestion_body: str
+class DiscoveredLens(TypedDict):
+    name: str
+    description: str
 
 
 class AiClient(Protocol):
-    def generate_suggestions(
+    def discover_lenses(
         self,
         *,
-        lens: LensName,
         markdown: str,
         logical_path: str,
-    ) -> list[AiSuggestionDraft]: ...
-```
-
-```python
-# apps/api/src/writer_assistance_api/ai/anthropic_vertex_client.py
-import json
-from typing import cast
-
-from anthropic import AnthropicVertex
-
-from writer_assistance_api.ai.client import AiClient, AiSuggestionDraft, LensName
-
-MODEL_NAME = "claude-sonnet-4-5@20250929"
-
-
-class AnthropicVertexAiClient(AiClient):
-    def __init__(self, *, project_id: str, region: str) -> None:
-        self._client = AnthropicVertex(project_id=project_id, region=region)
-
-    def generate_suggestions(
-        self,
-        *,
-        lens: LensName,
-        markdown: str,
-        logical_path: str,
-    ) -> list[AiSuggestionDraft]:
-        response = self._client.messages.create(
-            model=MODEL_NAME,
-            max_tokens=1024,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Lens: {lens}\n"
-                        f"Resource: {logical_path}\n"
-                        "Return 1-3 concise note suggestions as JSON with keys "
-                        "`source_context` and `suggestion_body`.\n\n"
-                        f"{markdown}"
-                    ),
-                }
-            ],
-        )
-        payload = response.content[0].text
-        return cast(list[AiSuggestionDraft], json.loads(payload))
-```
-
-```python
-# apps/api/src/writer_assistance_api/config.py
-import os
-from dataclasses import dataclass
-
-@dataclass(frozen=True)
-class Settings:
-    database_url: str = DEFAULT_DATABASE_URL
-    anthropic_vertex_project_id: str | None = None
-    cloud_ml_region: str | None = None
-
-
-def get_settings(*, database_url: str | None = None) -> Settings:
-    return Settings(
-        database_url=database_url or os.getenv("WRITER_ASSISTANCE_DATABASE_URL") or DEFAULT_DATABASE_URL,
-        anthropic_vertex_project_id=os.getenv("ANTHROPIC_VERTEX_PROJECT_ID"),
-        cloud_ml_region=os.getenv("CLOUD_ML_REGION"),
-    )
+    ) -> list[DiscoveredLens]: ...
 ```
 
 ```python
 # apps/api/src/writer_assistance_api/schemas/analysis_runs.py
 class CreateAnalysisRunRequest(BaseModel):
     resource_id: str
-    lenses: list[LensName]
 
 
-class AnalysisRunResponse(BaseModel):
-    id: str
+class DiscoveredLensResponse(BaseModel):
+    name: str
+    description: str
+
+
+class AnalysisRunDetailResponse(BaseModel):
+    lens_discovery_status: Literal["queued", "running", "succeeded", "failed"]
+    discovered_lenses: list[DiscoveredLensResponse]
     generation_status: str
     lenses: list[AnalysisRunLensResponse]
     suggestions: list[AiSuggestionResponse]
 ```
 
 ```python
-# apps/api/alembic/versions/0004_create_analysis_runs.py
+# apps/api/alembic/versions/0006_add_lens_discovery_to_analysis_runs.py
 def upgrade() -> None:
-    op.create_table(
-        "analysis_runs",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("project_id", sa.String(), nullable=False),
-        sa.Column("resource_id", sa.String(), nullable=False),
-        sa.Column("requested_lenses_json", sa.Text(), nullable=False),
-        sa.Column("generation_status", sa.String(), nullable=False),
-        sa.Column("error_summary", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
-    )
-    op.create_table(
-        "analysis_run_lenses",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("analysis_run_id", sa.String(), nullable=False),
-        sa.Column("lens_name", sa.String(), nullable=False),
-        sa.Column("generation_status", sa.String(), nullable=False),
-        sa.Column("failure_reason", sa.Text(), nullable=True),
-    )
-    op.create_table(
-        "ai_suggestions",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("analysis_run_lens_id", sa.String(), nullable=False),
-        sa.Column("project_id", sa.String(), nullable=False),
-        sa.Column("resource_id", sa.String(), nullable=False),
-        sa.Column("lens_name", sa.String(), nullable=False),
-        sa.Column("source_context", sa.Text(), nullable=False),
-        sa.Column("suggestion_body", sa.Text(), nullable=False),
-        sa.Column("review_status", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-    )
+    op.add_column("analysis_runs", sa.Column("lens_discovery_status", sa.String(), nullable=False))
+    op.add_column("analysis_runs", sa.Column("discovered_lenses_json", sa.Text(), nullable=False))
 ```
 
-- [ ] **Step 4: Implement the background analysis runner and review endpoints**
+- [ ] **Step 4: Implement discovery-first processing and regeneration endpoints**
 
 ```python
 # apps/api/src/writer_assistance_api/services/analysis_runs.py
 def process_analysis_run(self, run_id: str) -> None:
     run = self._get_run(run_id)
     self._mark_run_running(run_id)
+    self._mark_lens_discovery_running(run_id)
+
+    discovered_lenses = self._discover_or_load_lenses(run)
+    if discovered_lenses is None:
+        self._finish_run(run_id, "failed")
+        return
 
     completed_with_failures = False
-    for lens in run.requested_lenses:
-        self._mark_lens_running(run_id, lens)
-        try:
-          suggestions = self._ai_client.generate_suggestions(
-              lens=lens,
-              markdown=run.markdown,
-              logical_path=run.logical_path,
-          )
-          self._persist_lens_success(run_id, lens, suggestions)
-        except Exception as exc:
-          completed_with_failures = True
-          self._persist_lens_failure(run_id, lens, str(exc))
+    for lens in discovered_lenses:
+        ...
 
-    self._finish_run(run_id, "completed_with_failures" if completed_with_failures else "succeeded")
+
+def retry_failed_lenses(self, run_id: str) -> AnalysisRun:
+    ...
+
+
+def create_regenerated_run(self, resource_id: str) -> AnalysisRun:
+    ...
 ```
 
 ```python
 # apps/api/src/writer_assistance_api/routes/analysis_runs.py
 @router.post("/projects/{project_id}/analysis-runs", status_code=status.HTTP_202_ACCEPTED)
-def create_analysis_run(
-    project_id: str,
-    payload: CreateAnalysisRunRequest,
-    background_tasks: BackgroundTasks,
-    service: AnalysisRunsService = Depends(get_analysis_runs_service),
-) -> AnalysisRunQueuedResponse:
-    run = service.create_run(project_id=project_id, payload=payload)
-    background_tasks.add_task(service.process_analysis_run, run.id)
-    return run
+def create_analysis_run(...) -> AnalysisRunQueuedResponse: ...
+
+
+@router.post("/resources/{resource_id}/analysis-runs/regenerate-lenses", status_code=status.HTTP_202_ACCEPTED)
+def regenerate_lenses(...) -> AnalysisRunQueuedResponse: ...
 
 
 @router.post("/analysis-runs/{run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
-def retry_analysis_run(
-    run_id: str,
-    background_tasks: BackgroundTasks,
-    service: AnalysisRunsService = Depends(get_analysis_runs_service),
-) -> AnalysisRunQueuedResponse:
-    run = service.retry_run(run_id)
-    background_tasks.add_task(service.process_analysis_run, run.id)
-    return run
-
-
-@router.post("/ai-suggestions/{suggestion_id}/accept")
-def accept_suggestion(
-    suggestion_id: str,
-    service: AnalysisRunsService = Depends(get_analysis_runs_service),
-) -> AnnotationResponse:
-    return service.accept_suggestion(suggestion_id)
+def retry_analysis_run(...) -> AnalysisRunQueuedResponse: ...
 ```
 
-```python
-# apps/api/src/writer_assistance_api/app.py
-from pathlib import Path
-
-from fastapi import FastAPI
-
-from writer_assistance_api.ai.anthropic_vertex_client import AnthropicVertexAiClient
-from writer_assistance_api.ai.client import AiClient
-
-def create_app(
-    *,
-    database_url: str | None = None,
-    storage_root: Path | None = None,
-    ai_client: AiClient | None = None,
-) -> FastAPI:
-    settings = get_settings(database_url=database_url)
-    resolved_ai_client = ai_client
-    if resolved_ai_client is None:
-        assert settings.anthropic_vertex_project_id is not None
-        assert settings.cloud_ml_region is not None
-        resolved_ai_client = AnthropicVertexAiClient(
-            project_id=settings.anthropic_vertex_project_id,
-            region=settings.cloud_ml_region,
-        )
-    app = FastAPI(title="Writer Assistance API")
-    app.state.ai_client = resolved_ai_client
-```
-
-- [ ] **Step 5: Add lens selection and suggestion review UI**
+- [ ] **Step 5: Replace the fixed lens picker with discovery-state UI**
 
 ```tsx
 // apps/web/src/components/lens-picker.tsx
-const LENSES = ['financial', 'real_estate', 'political', 'software_engineering'] as const;
-
-export function LensPicker({ onRun }: { onRun: (lenses: string[]) => Promise<void> }) {
-  const [selected, setSelected] = useState<string[]>(['financial']);
-
+export function LensPicker({
+  discoveredLenses,
+}: {
+  discoveredLenses: Array<{ name: string; description: string }>;
+}) {
   return (
     <section>
       <h2>AI lenses</h2>
-      {LENSES.map((lens) => (
-        <label key={lens}>
-          <input
-            type="checkbox"
-            checked={selected.includes(lens)}
-            onChange={() =>
-              setSelected((current) =>
-                current.includes(lens) ? current.filter((item) => item !== lens) : [...current, lens],
-              )
-            }
-          />
-          {lens}
-        </label>
+      {discoveredLenses.map((lens) => (
+        <article key={lens.name}>
+          <strong>{lens.name}</strong>
+          <p>{lens.description}</p>
+        </article>
       ))}
-      <button onClick={() => onRun(selected)}>Analyze current resource</button>
     </section>
   );
 }
@@ -1324,51 +1156,39 @@ export function LensPicker({ onRun }: { onRun: (lenses: string[]) => Promise<voi
 
 ```tsx
 // apps/web/src/components/ai-suggestions-panel.tsx
-export function AiSuggestionsPanel({
-  suggestions,
-  failedLenses,
-}: {
-  suggestions: Array<{ id: string; lensName: string; sourceContext: string; suggestionBody: string }>;
-  failedLenses: Array<{ lensName: string; failureReason: string }>;
-}) {
+export function AiSuggestionsPanel(...) {
   return (
     <aside>
       <h2>AI suggestions</h2>
-      {failedLenses.map((lens) => (
-        <p key={lens.lensName}>
-          {lens.lensName} failed: {lens.failureReason} <button>Retry</button>
-        </p>
-      ))}
-      {suggestions.map((suggestion) => (
-        <article key={suggestion.id}>
-          <strong>{suggestion.lensName}</strong>
-          <blockquote>{suggestion.sourceContext}</blockquote>
-          <p>{suggestion.suggestionBody}</p>
-          <button>Accept</button>
-          <button>Discard</button>
-        </article>
-      ))}
+      {hasExistingRun ? <button>Regenerate lenses</button> : <button>Run analysis</button>}
+      {hasFailedLenses ? <button>Retry failed lenses</button> : null}
+      {lensDiscoveryStatus === 'running' ? <p>Discovering lenses...</p> : null}
+      {generationStatus === 'running' ? <p>Generating suggestions...</p> : null}
+      {discoveredLenses.length > 0 ? <LensPicker discoveredLenses={discoveredLenses} /> : null}
+      {/* latest-run suggestions only */}
     </aside>
   );
 }
 ```
 
-- [ ] **Step 6: Run migration, API test, frontend test, and mypy**
+Keep accepted suggestions visible through the normal notes query so the notes panel still shows them even after the latest AI run changes.
 
-Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run src/routes/project.test.tsx`
+- [ ] **Step 6: Verify backend and frontend behavior**
 
-Expected: PASS with separate generation and review state, partial per-lens failure behavior, retry support, and mypy clean.
+Run: `uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head && uv run --project apps/api pytest apps/api/tests/test_analysis_runs_api.py -q && uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src && pnpm --dir apps/web exec vitest run src/routes/project.test.tsx src/lib/api.test.ts`
+
+Expected: PASS with first-run lens discovery, latest-run replacement behavior, retry without rediscovery, regenerate with fresh discovery, and mypy clean.
 
 - [ ] **Step 7: Log the task and commit**
 
 ```md
 # devlogs.md append
-- Added explicit AI analysis runs, fixed v1 lens catalog, and visible suggestion review with accept/discard actions.
+- Updated the reading workspace plan so AI analysis discovers open-ended document-specific lenses on first run, keeps the AI panel bound to the latest run, and preserves accepted notes across regenerated runs.
 ```
 
 ```bash
-git add apps/api/alembic/versions/0004_create_analysis_runs.py apps/api/src/writer_assistance_api/background.py apps/api/src/writer_assistance_api/ai apps/api/src/writer_assistance_api/schemas/analysis_runs.py apps/api/src/writer_assistance_api/services/analysis_runs.py apps/api/src/writer_assistance_api/routes/analysis_runs.py apps/api/src/writer_assistance_api/models.py apps/api/tests/test_analysis_runs_api.py apps/web/src/components/lens-picker.tsx apps/web/src/components/ai-suggestions-panel.tsx apps/web/src/routes/project.tsx apps/web/src/lib/api.ts devlogs.md
-git commit -m "feat: add ai suggestion review workflow"
+git add apps/api/alembic/versions/0006_add_lens_discovery_to_analysis_runs.py apps/api/src/writer_assistance_api/ai apps/api/src/writer_assistance_api/schemas/analysis_runs.py apps/api/src/writer_assistance_api/services/analysis_runs.py apps/api/src/writer_assistance_api/routes/analysis_runs.py apps/api/src/writer_assistance_api/models.py apps/api/tests/test_analysis_runs_api.py apps/web/src/components/lens-picker.tsx apps/web/src/components/ai-suggestions-panel.tsx apps/web/src/routes/project.tsx apps/web/src/routes/project.test.tsx apps/web/src/lib/api.ts devlogs.md
+git commit -m "feat: add ai-discovered analysis lenses"
 ```
 
 ## Task 7: Add Smoke Coverage, Docs, And Final Verification
@@ -1401,7 +1221,7 @@ test('user can create a project, upload markdown, add a note, and accept an ai s
   await page.getByLabel('Note body').fill('Need stronger evidence here.');
   await page.getByRole('button', { name: 'Save note' }).click();
 
-  await page.getByRole('button', { name: 'Analyze current resource' }).click();
+  await page.getByRole('button', { name: 'Run analysis' }).click();
   await expect(page.getByText('AI suggestions')).toBeVisible();
   await page.getByRole('button', { name: 'Accept' }).first().click();
   await expect(page.getByText('Check whether rents justify this claim.')).toBeVisible();
