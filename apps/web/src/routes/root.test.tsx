@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 import { RootRoute } from './root';
@@ -30,7 +31,9 @@ function renderRootRoute() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <RootRoute />
+      <MemoryRouter>
+        <RootRoute />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -77,7 +80,8 @@ it('shows the project list when projects exist', async () => {
   renderRootRoute();
 
   expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
-  expect(screen.getByText('Municipal Housing Brief')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Municipal Housing Brief' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Municipal Housing Brief' })).toBeInTheDocument();
   expect(screen.queryByText('Create your first project')).not.toBeInTheDocument();
 });
 

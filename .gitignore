@@ -6,4 +6,6 @@ __pycache__/
 .venv/
 node_modules/
 /data/
+/test-results/
+/playwright-report/
 *.db

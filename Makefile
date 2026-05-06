@@ -6,3 +6,28 @@ api-test:
 
 api-typecheck:
 	uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src
+
+web-test:
+	pnpm --dir apps/web exec vitest run
+
+web-typecheck:
+	pnpm --dir apps/web exec tsc --noEmit
+
+smoke-api:
+	pnpm smoke:api
+
+smoke-web:
+	pnpm smoke:web
+
+smoke-install:
+	pnpm e2e:install
+
+smoke-test:
+	pnpm smoke
+
+verify:
+	uv run --project apps/api pytest apps/api/tests -q
+	uv run --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src
+	pnpm --dir apps/web exec vitest run
+	pnpm --dir apps/web exec tsc --noEmit
+	pnpm exec playwright test

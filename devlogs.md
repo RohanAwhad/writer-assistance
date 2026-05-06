@@ -119,3 +119,5 @@
 - Added the rendered reading workspace with resource tree navigation and markdown viewing.
 - Task 5 progress: added persisted quote-anchored user notes with annotation APIs, storage, and a minimal notes panel flow in the reading workspace.
 - Task 6 progress: added explicit AI analysis runs, per-lens suggestion persistence/review state, suggestion accept/discard flows, and a reading-workspace UI for running and reviewing AI suggestions.
+- Task 7 progress: added a Playwright smoke test for the reading-workspace flow, root smoke/e2e scripts plus `playwright.config.ts`, and a deterministic `WRITER_ASSISTANCE_AI_MODE=smoke` backend path for browser coverage.
+- Task 7 progress: documented the developer runbook in `README.md` and added `Makefile` targets for smoke setup, smoke execution, and full verification.

@@ -1,5 +1,15 @@
 {
   "name": "writer-assistance",
   "private": true,
-  "packageManager": "pnpm@10.11.0"
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "smoke:api": "rm -rf data/playwright-smoke && mkdir -p data/playwright-smoke && WRITER_ASSISTANCE_DATABASE_URL=\"sqlite+pysqlite:///$PWD/data/playwright-smoke/app.db\" WRITER_ASSISTANCE_STORAGE_ROOT=\"$PWD/data/playwright-smoke/storage\" WRITER_ASSISTANCE_AI_MODE=smoke uv run --project apps/api uvicorn writer_assistance_api.main:app --host 127.0.0.1 --port 8000",
+    "smoke:web": "pnpm --dir apps/web exec vite --host 127.0.0.1 --port 4173 --strictPort",
+    "smoke": "playwright test apps/web/e2e/reading-workspace.spec.ts",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
 }

@@ -10,6 +10,9 @@ from writer_assistance_api.ai.client import (
     LensName,
     normalize_suggestion_drafts,
 )
+from writer_assistance_api.schemas.annotations import QuoteAnchor
+
+SMOKE_SUGGESTION_BODY = "Highlight the demand trend as evidence for pricing power."
 
 
 class FakeAiClient:
@@ -44,3 +47,40 @@ class FakeAiClient:
         if isinstance(outcome, Exception):
             raise outcome
         return normalize_suggestion_drafts(outcome)
+
+
+class SmokeAiClient:
+    def analyze_resource(
+        self,
+        *,
+        lens: LensName,
+        markdown: str,
+        logical_path: str,
+    ) -> list[AiSuggestionDraft]:
+        del logical_path
+        if lens != "financial":
+            return []
+
+        paragraph = _first_non_heading_paragraph(markdown)
+        return [
+            AiSuggestionDraft(
+                body=SMOKE_SUGGESTION_BODY,
+                anchor=QuoteAnchor(
+                    quoteText=paragraph,
+                    normalizedText=" ".join(paragraph.split()).lower(),
+                    startOffset=0,
+                    endOffset=len(paragraph),
+                    blockPath=["paragraph", "1"],
+                    resolutionStatus="exact",
+                ),
+            )
+        ]
+
+
+def _first_non_heading_paragraph(markdown: str) -> str:
+    for line in markdown.splitlines():
+        candidate = line.strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        return candidate
+    raise ValueError("Smoke AI mode requires markdown with at least one paragraph")

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from writer_assistance_api.ai.anthropic_vertex_client import AnthropicVertexAiClient
 from writer_assistance_api.ai.client import AiClient, LensName, normalize_suggestion_drafts
+from writer_assistance_api.ai.fake_client import SmokeAiClient
 from writer_assistance_api.config import Settings
 from writer_assistance_api.db import get_session
 from writer_assistance_api.models import (
@@ -499,10 +500,13 @@ def _get_or_create_ai_client(app: FastAPI) -> AiClient:
         return ai_client
 
     settings = cast(Settings, app.state.settings)
-    try:
-        ai_client = AnthropicVertexAiClient.from_settings(settings)
-    except Exception as exc:
-        ai_client = _FailingAiClient(str(exc) or exc.__class__.__name__)
+    if settings.ai_mode == "smoke":
+        ai_client = SmokeAiClient()
+    else:
+        try:
+            ai_client = AnthropicVertexAiClient.from_settings(settings)
+        except Exception as exc:
+            ai_client = _FailingAiClient(str(exc) or exc.__class__.__name__)
     app.state.ai_client = ai_client
     return ai_client
 
