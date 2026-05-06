@@ -45,7 +45,6 @@ export function useProjectsQuery() {
   return useQuery({
     queryKey: projectsQueryKey,
     queryFn: listProjects,
-    initialData: { projects: [] } satisfies ProjectsResponse,
   });
 }
 

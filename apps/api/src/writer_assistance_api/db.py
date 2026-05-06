@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any, cast
 
 from fastapi import Request
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -16,6 +18,10 @@ def create_engine_and_session_factory(database_url: str) -> tuple[Engine, sessio
 
     if database_url.startswith("sqlite"):
         engine_options["connect_args"] = {"check_same_thread": False}
+        database_path = make_url(database_url).database
+
+        if database_path is not None and database_path != ":memory:":
+            Path(database_path).parent.mkdir(parents=True, exist_ok=True)
 
         if database_url.endswith(":memory:"):
             engine_options["poolclass"] = StaticPool

@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_DATABASE_PATH = Path(__file__).resolve().parents[2] / "writer_assistance.db"
+DEFAULT_DATABASE_PATH = Path(__file__).resolve().parents[4] / "data" / "app.db"
 DEFAULT_DATABASE_URL = f"sqlite+pysqlite:///{DEFAULT_DATABASE_PATH}"
 
 
