@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from writer_assistance_api.db import get_session
 from writer_assistance_api.models import Project, Resource
-from writer_assistance_api.schemas.resources import ResourceResponse
+from writer_assistance_api.schemas.resources import ResourceContentResponse, ResourceResponse
 from writer_assistance_api.storage import StorageDriver
 
 LOGICAL_PATH_CONFLICT_CODE = "logical_path_conflict"
@@ -105,6 +105,26 @@ class ResourcesService:
             raise
 
         return [ResourceResponse.model_validate(resource) for resource in resources]
+
+    def list_resources(self, project_id: str) -> list[ResourceResponse]:
+        project = self._session.scalar(select(Project).where(Project.id == project_id))
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+        resources = list(
+            self._session.scalars(
+                select(Resource).where(Resource.project_id == project_id).order_by(Resource.logical_path)
+            )
+        )
+        return [ResourceResponse.model_validate(resource) for resource in resources]
+
+    def get_resource_content(self, resource_id: str) -> ResourceContentResponse:
+        resource = self._session.get(Resource, resource_id)
+        if resource is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+
+        markdown = self._storage.read_object(resource.storage_location).decode("utf-8")
+        return ResourceContentResponse(resource_id=resource.id, markdown=markdown)
 
     def _find_conflicting_paths(self, *, project_id: str, logical_paths: list[str]) -> list[str]:
         duplicate_paths = {

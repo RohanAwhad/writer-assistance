@@ -46,6 +46,65 @@ def test_upload_markdown_resources_returns_public_fields_only(tmp_path) -> None:
     assert "storage_location" not in response.json()["resources"][0]
 
 
+def test_list_resources_returns_public_fields_only(tmp_path) -> None:
+    client = _create_client(tmp_path)
+    project = _create_project(client)
+
+    upload_response = client.post(
+        f"/projects/{project['id']}/resources/upload",
+        files=[
+            ("paths", (None, "research/market.md")),
+            ("paths", (None, "research/zoning.md")),
+            ("files", ("market.md", b"# Market\n\nDemand is rising.", "text/markdown")),
+            ("files", ("zoning.md", b"# Zoning\n\nRules are changing.", "text/markdown")),
+        ],
+    )
+
+    assert upload_response.status_code == 201
+
+    response = client.get(f"/projects/{project['id']}/resources")
+
+    assert response.status_code == 200
+    assert [item["logical_path"] for item in response.json()["resources"]] == [
+        "research/market.md",
+        "research/zoning.md",
+    ]
+    assert set(response.json()["resources"][0]) == {
+        "id",
+        "project_id",
+        "logical_path",
+        "original_filename",
+        "content_hash",
+        "upload_status",
+        "created_at",
+    }
+    assert "storage_location" not in response.json()["resources"][0]
+
+
+def test_get_resource_content_returns_uploaded_markdown(tmp_path) -> None:
+    client = _create_client(tmp_path)
+    project = _create_project(client)
+
+    upload_response = client.post(
+        f"/projects/{project['id']}/resources/upload",
+        files=[
+            ("paths", (None, "research/market.md")),
+            ("files", ("market.md", b"# Market\n\nDemand is rising.", "text/markdown")),
+        ],
+    )
+
+    assert upload_response.status_code == 201
+    resource = upload_response.json()["resources"][0]
+
+    response = client.get(f"/resources/{resource['id']}/content")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_id": resource["id"],
+        "markdown": "# Market\n\nDemand is rising.",
+    }
+
+
 def test_upload_rejects_duplicate_logical_path_in_same_project(tmp_path) -> None:
     client = _create_client(tmp_path)
     project = _create_project(client)

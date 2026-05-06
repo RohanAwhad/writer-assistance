@@ -15,3 +15,8 @@ class ResourceResponse(BaseModel):
     content_hash: str
     upload_status: str
     created_at: datetime
+
+
+class ResourceContentResponse(BaseModel):
+    resource_id: str
+    markdown: str

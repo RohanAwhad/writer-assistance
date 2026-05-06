@@ -116,3 +116,4 @@
 - Recorded that backend Vertex configuration should come from `ANTHROPIC_VERTEX_PROJECT_ID` and `CLOUD_ML_REGION`.
 - Bootstrapped the Python FastAPI backend with a strict mypy baseline and a health route.
 - Added SQLite, Alembic migrations, project APIs, and the initial React shell.
+- Added the rendered reading workspace with resource tree navigation and markdown viewing.

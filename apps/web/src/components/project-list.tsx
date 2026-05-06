@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import type { Project } from '../lib/api';
 
 type ProjectListProps = {
@@ -14,7 +16,9 @@ export function ProjectList({ projects }: ProjectListProps) {
       <h2>Projects</h2>
       <ul>
         {projects.map((project) => (
-          <li key={project.id}>{project.title}</li>
+          <li key={project.id}>
+            <Link to={`/projects/${project.id}`}>{project.title}</Link>
+          </li>
         ))}
       </ul>
     </section>

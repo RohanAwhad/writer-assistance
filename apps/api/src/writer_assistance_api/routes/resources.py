@@ -4,10 +4,26 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
-from writer_assistance_api.schemas.resources import ResourceResponse
+from writer_assistance_api.schemas.resources import ResourceContentResponse, ResourceResponse
 from writer_assistance_api.services.resources import ResourcesService, get_resources_service
 
 router = APIRouter(tags=["resources"])
+
+
+@router.get("/projects/{project_id}/resources")
+def list_resources(
+    project_id: str,
+    service: Annotated[ResourcesService, Depends(get_resources_service)],
+) -> dict[str, list[ResourceResponse]]:
+    return {"resources": service.list_resources(project_id)}
+
+
+@router.get("/resources/{resource_id}/content")
+def get_resource_content(
+    resource_id: str,
+    service: Annotated[ResourcesService, Depends(get_resources_service)],
+) -> ResourceContentResponse:
+    return service.get_resource_content(resource_id)
 
 
 @router.post("/projects/{project_id}/resources/upload", status_code=status.HTTP_201_CREATED)
