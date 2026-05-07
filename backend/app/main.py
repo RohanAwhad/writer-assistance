@@ -1,3 +1,4 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 
@@ -136,11 +137,17 @@ async def delete_resource(resource_id: int):
 async def generate_lenses_for_resource(resource_id: int):
     resource = await fetch_one("SELECT * FROM resources WHERE id = ?", (resource_id,))
 
-    lenses_data = generate_lenses(resource["content"], resource["filename"])
+    lenses_data = await generate_lenses(resource["content"], resource["filename"])
+
+    # generate notes for all lenses in parallel
+    notes_coros = [
+        generate_lens_notes(resource["content"], lens["name"], lens["perspective"])
+        for lens in lenses_data
+    ]
+    all_notes = await asyncio.gather(*notes_coros)
 
     result = []
-    for lens in lenses_data:
-        notes = generate_lens_notes(resource["content"], lens["name"], lens["perspective"])
+    for lens, notes in zip(lenses_data, all_notes):
         lens_id = await execute(
             "INSERT INTO lenses (resource_id, name, perspective, notes) VALUES (?, ?, ?, ?)",
             (resource_id, lens["name"], lens["perspective"], json.dumps(notes)),
@@ -221,7 +228,7 @@ async def generate_project_report(project_id: int):
     )
 
     notes_for_ai = [{"content": n["content"], "highlight": n["highlight"]} for n in notes]
-    blocks_data = generate_report(notes_for_ai, project["name"])
+    blocks_data = await generate_report(notes_for_ai, project["name"])
 
     report_id = await execute(
         "INSERT INTO reports (project_id, title) VALUES (?, ?)",
@@ -255,14 +262,14 @@ async def update_block(report_id: int, block_id: int, body: BlockUpdate):
 async def get_tone_variations(report_id: int, block_id: int):
     block = await fetch_one("SELECT * FROM report_blocks WHERE id = ? AND report_id = ?", (block_id, report_id))
     full_report = await _build_report_text(report_id)
-    return generate_tone_variations(block["content"], full_report)
+    return await generate_tone_variations(block["content"], full_report)
 
 
 @app.post("/api/reports/{report_id}/blocks/{block_id}/critique")
 async def get_critique(report_id: int, block_id: int):
     block = await fetch_one("SELECT * FROM report_blocks WHERE id = ? AND report_id = ?", (block_id, report_id))
     full_report = await _build_report_text(report_id)
-    return generate_critique(block["content"], full_report)
+    return await generate_critique(block["content"], full_report)
 
 
 # ---------------------------------------------------------------------------

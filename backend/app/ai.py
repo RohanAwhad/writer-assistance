@@ -1,14 +1,14 @@
 import json
 
-from anthropic import AnthropicVertex
+from anthropic import AsyncAnthropicVertex
 
 
-client = AnthropicVertex(project_id="itpc-gcp-ai-eng-claude", region="global")
+client = AsyncAnthropicVertex(project_id="itpc-gcp-ai-eng-claude", region="global")
 MODEL = "claude-sonnet-4-5@20250929"
 
 
-def _ask(system: str, user: str) -> str:
-    response = client.messages.create(
+async def _ask(system: str, user: str) -> str:
+    response = await client.messages.create(
         model=MODEL,
         max_tokens=4096,
         system=system,
@@ -25,7 +25,7 @@ def _parse_json(text: str) -> list | dict:
     return json.loads(text)
 
 
-def generate_lenses(content: str, filename: str) -> list[dict]:
+async def generate_lenses(content: str, filename: str) -> list[dict]:
     system = (
         "You are an expert at identifying relevant analytical perspectives for documents. "
         "Analyze the given document and return 3-5 expert 'lenses' — perspectives from which "
@@ -36,10 +36,10 @@ def generate_lenses(content: str, filename: str) -> list[dict]:
         "No markdown fences, no explanation — just the JSON array."
     )
     user = f"Filename: {filename}\n\nDocument content:\n{content}"
-    return _parse_json(_ask(system, user))
+    return _parse_json(await _ask(system, user))
 
 
-def generate_lens_notes(content: str, lens_name: str, lens_perspective: str) -> list[dict]:
+async def generate_lens_notes(content: str, lens_name: str, lens_perspective: str) -> list[dict]:
     system = (
         f"You are a {lens_name}. {lens_perspective}\n\n"
         "Read the document and produce 3-7 expert observations from your perspective. "
@@ -49,10 +49,10 @@ def generate_lens_notes(content: str, lens_name: str, lens_perspective: str) -> 
         '- "highlight": a short, exact quote from the document that this note relates to\n\n'
         "No markdown fences, no explanation — just the JSON array."
     )
-    return _parse_json(_ask(system, content))
+    return _parse_json(await _ask(system, content))
 
 
-def generate_report(notes: list[dict], project_name: str) -> list[dict]:
+async def generate_report(notes: list[dict], project_name: str) -> list[dict]:
     system = (
         "You are a senior report writer. Given a collection of expert notes and observations, "
         "synthesize them into a structured analytical report.\n\n"
@@ -65,10 +65,10 @@ def generate_report(notes: list[dict], project_name: str) -> list[dict]:
     )
     notes_text = json.dumps(notes, indent=2)
     user = f"Project: {project_name}\n\nNotes to synthesize:\n{notes_text}"
-    return _parse_json(_ask(system, user))
+    return _parse_json(await _ask(system, user))
 
 
-def generate_tone_variations(block_content: str, full_report: str) -> list[dict]:
+async def generate_tone_variations(block_content: str, full_report: str) -> list[dict]:
     system = (
         "You are an expert editor. Rewrite the given paragraph in 5 different tones, "
         "preserving the core meaning but adjusting style.\n\n"
@@ -81,10 +81,10 @@ def generate_tone_variations(block_content: str, full_report: str) -> list[dict]
         f"Full report context:\n{full_report}\n\n"
         f"Paragraph to rewrite:\n{block_content}"
     )
-    return _parse_json(_ask(system, user))
+    return _parse_json(await _ask(system, user))
 
 
-def generate_critique(block_content: str, full_report: str) -> dict:
+async def generate_critique(block_content: str, full_report: str) -> dict:
     system = (
         "You are a rigorous critical thinker. Examine the given paragraph and challenge "
         "its arguments, assumptions, and logic.\n\n"
@@ -98,4 +98,4 @@ def generate_critique(block_content: str, full_report: str) -> dict:
         f"Full report context:\n{full_report}\n\n"
         f"Paragraph to critique:\n{block_content}"
     )
-    return _parse_json(_ask(system, user))
+    return _parse_json(await _ask(system, user))
