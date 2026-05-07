@@ -4,7 +4,7 @@ from anthropic import AsyncAnthropicVertex
 
 
 client = AsyncAnthropicVertex(project_id="itpc-gcp-ai-eng-claude", region="global")
-MODEL = "claude-sonnet-4-5@20250929"
+MODEL = "claude-opus-4-6@default"
 
 
 async def _ask(system: str, user: str) -> str:
