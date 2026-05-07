@@ -352,7 +352,7 @@ export default function ProjectWorkspace() {
             <Plus className="size-3.5" />
           </Button>
         </div>
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="flex flex-col gap-2 p-2">
             {notes.length === 0 ? (
               <p className="px-1 py-4 text-xs text-muted-foreground">
@@ -392,7 +392,7 @@ export default function ProjectWorkspace() {
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
         <div className="border-t p-2">
           <Button
             className="w-full"
