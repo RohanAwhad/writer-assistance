@@ -28,7 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import * as api from "@/lib/api";
-import type { Resource, Lens, Note } from "@/lib/api";
+import type { Resource, Lens, Note, ReportSummary } from "@/lib/api";
 import SelectionPopup from "@/components/SelectionPopup";
 
 export default function ProjectWorkspace() {
@@ -50,6 +50,7 @@ export default function ProjectWorkspace() {
   const [newNoteHighlight, setNewNoteHighlight] = useState("");
   const [loadingResources, setLoadingResources] = useState(true);
   const [dragging, setDragging] = useState(false);
+  const [reports, setReports] = useState<ReportSummary[]>([]);
 
   const pid = Number(projectId);
 
@@ -65,10 +66,16 @@ export default function ProjectWorkspace() {
     setNotes(data);
   }, [pid]);
 
+  const loadReports = useCallback(async () => {
+    const data = await api.listReports(pid);
+    setReports(data);
+  }, [pid]);
+
   useEffect(() => {
     loadResources();
     loadNotes();
-  }, [loadResources, loadNotes]);
+    loadReports();
+  }, [loadResources, loadNotes, loadReports]);
 
   const handleUpload = async (files: FileList | File[]) => {
     const arr = Array.from(files).filter((f) => f.name.endsWith(".md"));
@@ -406,7 +413,22 @@ export default function ProjectWorkspace() {
             )}
           </div>
         </div>
-        <div className="border-t p-2">
+        <div className="border-t p-2 space-y-2">
+          {reports.length > 0 && (
+            <div className="space-y-1">
+              <p className="px-1 text-xs font-medium text-muted-foreground">Reports</p>
+              {reports.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  onClick={() => navigate(`/projects/${pid}/report/${r.id}`)}
+                >
+                  <FileText className="size-3.5 shrink-0" />
+                  <span className="flex-1 truncate">{r.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <Button
             className="w-full"
             onClick={handleGenerateReport}

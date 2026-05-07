@@ -3,6 +3,7 @@ import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -249,6 +250,14 @@ async def delete_note(note_id: int):
 # Reports
 # ---------------------------------------------------------------------------
 
+@app.get("/api/projects/{project_id}/reports")
+async def list_reports(project_id: int):
+    return await fetch_all(
+        "SELECT id, project_id, title, created_at, updated_at FROM reports WHERE project_id = ? ORDER BY created_at DESC",
+        (project_id,),
+    )
+
+
 @app.post("/api/projects/{project_id}/reports/generate")
 async def generate_project_report(project_id: int):
     project = await fetch_one("SELECT * FROM projects WHERE id = ?", (project_id,))
@@ -277,6 +286,16 @@ async def generate_project_report(project_id: int):
 @app.get("/api/reports/{report_id}")
 async def get_report(report_id: int):
     return await _get_report_with_blocks(report_id)
+
+
+@app.get("/api/reports/{report_id}/export")
+async def export_report(report_id: int):
+    report = await fetch_one("SELECT * FROM reports WHERE id = ?", (report_id,))
+    markdown = await _build_report_text(report_id)
+    return PlainTextResponse(
+        content=markdown,
+        headers={"Content-Disposition": f'attachment; filename="{report["title"]}.md"'},
+    )
 
 
 @app.put("/api/reports/{report_id}/blocks/{block_id}")

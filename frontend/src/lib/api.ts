@@ -156,6 +156,17 @@ export const discardLensNotes = (
 export const deleteNote = (id: number) =>
   request<{ ok: boolean }>(`/api/notes/${id}`, { method: "DELETE" });
 
+export interface ReportSummary {
+  id: number;
+  project_id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const listReports = (projectId: number) =>
+  request<ReportSummary[]>(`/api/projects/${projectId}/reports`);
+
 export const generateReport = (projectId: number) =>
   request<Report>(`/api/projects/${projectId}/reports/generate`, {
     method: "POST",
@@ -163,6 +174,21 @@ export const generateReport = (projectId: number) =>
 
 export const getReport = (id: number) =>
   request<Report>(`/api/reports/${id}`);
+
+export const exportReport = async (reportId: number) => {
+  const res = await fetch(`/api/reports/${reportId}/export`);
+  const text = await res.text();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="(.+)"/);
+  const filename = match ? match[1] : "report.md";
+  const blob = new Blob([text], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 export const updateBlock = (
   reportId: number,

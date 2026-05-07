@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
+  Download,
   Palette,
   MessageSquareWarning,
   Check,
@@ -133,10 +133,18 @@ export default function ReportEditor() {
           Back to Workspace
         </Button>
         <Separator orientation="vertical" className="h-5" />
-        <h1 className="text-sm font-medium">{report.title}</h1>
+        <h1 className="flex-1 text-sm font-medium">{report.title}</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api.exportReport(rid)}
+        >
+          <Download className="size-3.5" />
+          Export Markdown
+        </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl space-y-4 p-6">
           {sortedBlocks.map((block) => (
             <div key={block.id} className="group relative">
@@ -198,7 +206,7 @@ export default function ReportEditor() {
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Tone Variations Dialog */}
       <Dialog open={toneDialogOpen} onOpenChange={setToneDialogOpen}>
