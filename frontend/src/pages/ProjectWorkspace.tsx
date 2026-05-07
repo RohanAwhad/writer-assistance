@@ -101,8 +101,7 @@ export default function ProjectWorkspace() {
     const full = await api.getResource(r.id);
     setSelectedResource(full);
     setLenses([]);
-    const existing = await api.listLenses(r.id);
-    setLenses(existing);
+    loadLenses(r.id);
   };
 
   const handleGenerateLenses = async () => {
@@ -113,9 +112,20 @@ export default function ProjectWorkspace() {
     setGeneratingLenses(false);
   };
 
+  const loadLenses = useCallback(async (resourceId: number) => {
+    const existing = await api.listLenses(resourceId);
+    setLenses(existing);
+  }, []);
+
   const handleAcceptLensNote = async (lens: Lens, noteIndex: number) => {
     await api.acceptLensNotes(pid, lens.id, [noteIndex]);
     loadNotes();
+    if (selectedResource) loadLenses(selectedResource.id);
+  };
+
+  const handleDiscardLensNote = async (lens: Lens, noteIndex: number) => {
+    await api.discardLensNotes(pid, lens.id, [noteIndex]);
+    if (selectedResource) loadLenses(selectedResource.id);
   };
 
   const handleAddNote = async () => {
@@ -304,6 +314,9 @@ export default function ProjectWorkspace() {
                                   onAdd={() =>
                                     handleAcceptLensNote(lens, i)
                                   }
+                                  onDiscard={() =>
+                                    handleDiscardLensNote(lens, i)
+                                  }
                                 />
                               ))}
                             </div>
@@ -445,17 +458,18 @@ export default function ProjectWorkspace() {
 function LensNoteCard({
   note,
   onAdd,
+  onDiscard,
 }: {
-  note: { content: string; highlight: string };
+  note: { content: string; highlight: string; status: string };
   onAdd: () => void;
+  onDiscard: () => void;
 }) {
-  const [dismissed, setDismissed] = useState(false);
-  const [added, setAdded] = useState(false);
+  if (note.status === "discarded") return null;
 
-  if (dismissed) return null;
+  const accepted = note.status === "accepted";
 
   return (
-    <div className={`rounded-lg border p-3 text-sm ${added ? "opacity-50" : ""}`}>
+    <div className={`rounded-lg border p-3 text-sm ${accepted ? "opacity-50" : ""}`}>
       {note.highlight && (
         <p className="mb-2 border-l-2 border-primary/30 pl-2 text-xs text-muted-foreground italic">
           "{note.highlight}"
@@ -463,7 +477,7 @@ function LensNoteCard({
       )}
       <p className="text-xs leading-relaxed">{note.content}</p>
       <div className="mt-2 flex gap-1">
-        {added ? (
+        {accepted ? (
           <Badge variant="secondary">
             <Check className="size-3" />
             Added
@@ -472,20 +486,17 @@ function LensNoteCard({
           <Button
             variant="outline"
             size="xs"
-            onClick={() => {
-              onAdd();
-              setAdded(true);
-            }}
+            onClick={onAdd}
           >
             <Plus className="size-3" />
             Add to Notes
           </Button>
         )}
-        {!added && (
+        {!accepted && (
           <Button
             variant="ghost"
             size="xs"
-            onClick={() => setDismissed(true)}
+            onClick={onDiscard}
           >
             <X className="size-3" />
             Discard

@@ -17,6 +17,7 @@ export interface Resource {
 export interface LensNote {
   content: string;
   highlight: string;
+  status: "pending" | "accepted" | "discarded";
 }
 
 export interface Lens {
@@ -136,6 +137,17 @@ export const acceptLensNotes = (
   noteIndices: number[]
 ) =>
   request<Note[]>(`/api/projects/${projectId}/notes/from-lens`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lens_id: lensId, note_ids: noteIndices }),
+  });
+
+export const discardLensNotes = (
+  projectId: number,
+  lensId: number,
+  noteIndices: number[]
+) =>
+  request<{ ok: boolean }>(`/api/projects/${projectId}/notes/discard-lens`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lens_id: lensId, note_ids: noteIndices }),

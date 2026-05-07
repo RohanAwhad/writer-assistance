@@ -148,6 +148,8 @@ async def generate_lenses_for_resource(resource_id: int):
 
     result = []
     for lens, notes in zip(lenses_data, all_notes):
+        for note in notes:
+            note["status"] = "pending"
         lens_id = await execute(
             "INSERT INTO lenses (resource_id, name, perspective, notes) VALUES (?, ?, ?, ?)",
             (resource_id, lens["name"], lens["perspective"], json.dumps(notes)),
@@ -199,6 +201,8 @@ async def accept_lens_notes(project_id: int, body: NotesFromLens):
     resource_id = lens["resource_id"]
     created = []
     for idx in body.note_ids:
+        if lens_notes[idx].get("status") == "accepted":
+            continue
         note_data = lens_notes[idx]
         note_id = await execute(
             "INSERT INTO notes (project_id, resource_id, lens_id, content, note_type, highlight) VALUES (?, ?, ?, ?, ?, ?)",
@@ -206,7 +210,33 @@ async def accept_lens_notes(project_id: int, body: NotesFromLens):
         )
         row = await fetch_one("SELECT * FROM notes WHERE id = ?", (note_id,))
         created.append(row)
+        lens_notes[idx]["status"] = "accepted"
+
+    await execute(
+        "UPDATE lenses SET notes = ? WHERE id = ?",
+        (json.dumps(lens_notes), body.lens_id),
+    )
     return created
+
+
+class DiscardLensNotes(BaseModel):
+    lens_id: int
+    note_ids: list[int]
+
+
+@app.post("/api/projects/{project_id}/notes/discard-lens")
+async def discard_lens_notes(project_id: int, body: DiscardLensNotes):
+    lens = await fetch_one("SELECT * FROM lenses WHERE id = ?", (body.lens_id,))
+    lens_notes: list[dict] = json.loads(lens["notes"])
+
+    for idx in body.note_ids:
+        lens_notes[idx]["status"] = "discarded"
+
+    await execute(
+        "UPDATE lenses SET notes = ? WHERE id = ?",
+        (json.dumps(lens_notes), body.lens_id),
+    )
+    return {"ok": True}
 
 
 @app.delete("/api/notes/{note_id}")
