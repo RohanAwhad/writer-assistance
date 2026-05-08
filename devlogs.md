@@ -60,3 +60,22 @@ Full-stack writing assistance webapp: "Writer's Desk"
 - File/directory tree view for resources
 - Report export (PDF, docx)
 - History/versioning for reports
+
+## 2026-05-08 — PDF Upload with Docling (v1.2)
+
+### What was built
+- PDF upload support using `docling` for PDF-to-markdown conversion
+- Extracted images saved to `backend/static/images/{resource_id}/` and served via FastAPI static mount
+- `<!-- image -->` placeholders in docling output replaced with `![Figure N](/static/images/...)` references
+- Frontend accepts `.md` and `.pdf` files (file input, drag-and-drop, UI text)
+
+### Key files
+- `backend/app/pdf.py` — `convert_pdf_to_markdown()` function
+- `backend/app/main.py` — static mount + PDF branch in upload endpoint
+- `frontend/src/pages/ProjectWorkspace.tsx` — accept filter + UI text updates
+
+### Gotchas
+- `docling` `DocumentConverter` `format_options` needs `PdfFormatOption` objects, not plain dicts
+- `pipeline_options.generate_picture_images = True` required to get PIL images from pictures
+- Image placeholders (`<!-- image -->`) map 1:1 with `result.document.pictures` — sequential replacement works
+- `docling` is a heavy dependency (~80 transitive packages including torch)
