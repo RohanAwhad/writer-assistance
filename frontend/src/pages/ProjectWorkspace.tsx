@@ -420,11 +420,23 @@ export default function ProjectWorkspace() {
               {reports.map((r) => (
                 <div
                   key={r.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  className="group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   onClick={() => navigate(`/projects/${pid}/report/${r.id}`)}
                 >
                   <FileText className="size-3.5 shrink-0" />
                   <span className="flex-1 truncate">{r.title}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="opacity-0 group-hover:opacity-100"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await api.deleteReport(r.id);
+                      loadReports();
+                    }}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
                 </div>
               ))}
             </div>

@@ -288,6 +288,13 @@ async def get_report(report_id: int):
     return await _get_report_with_blocks(report_id)
 
 
+@app.delete("/api/reports/{report_id}")
+async def delete_report(report_id: int):
+    await execute("DELETE FROM report_blocks WHERE report_id = ?", (report_id,))
+    await execute("DELETE FROM reports WHERE id = ?", (report_id,))
+    return {"ok": True}
+
+
 @app.get("/api/reports/{report_id}/export")
 async def export_report(report_id: int):
     report = await fetch_one("SELECT * FROM reports WHERE id = ?", (report_id,))

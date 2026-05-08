@@ -175,6 +175,9 @@ export const generateReport = (projectId: number) =>
 export const getReport = (id: number) =>
   request<Report>(`/api/reports/${id}`);
 
+export const deleteReport = (id: number) =>
+  request<{ ok: boolean }>(`/api/reports/${id}`, { method: "DELETE" });
+
 export const exportReport = async (reportId: number) => {
   const res = await fetch(`/api/reports/${reportId}/export`);
   const text = await res.text();
