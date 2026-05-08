@@ -78,7 +78,7 @@ export default function ProjectWorkspace() {
   }, [loadResources, loadNotes, loadReports]);
 
   const handleUpload = async (files: FileList | File[]) => {
-    const arr = Array.from(files).filter((f) => f.name.endsWith(".md"));
+    const arr = Array.from(files).filter((f) => f.name.endsWith(".md") || f.name.endsWith(".pdf"));
     if (arr.length === 0) return;
     await api.uploadResources(pid, arr);
     loadResources();
@@ -190,7 +190,7 @@ export default function ProjectWorkspace() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".md"
+            accept=".md,.pdf"
             multiple
             className="hidden"
             onChange={handleFileInput}
@@ -200,7 +200,7 @@ export default function ProjectWorkspace() {
         {dragging && (
           <div className="m-2 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 p-6 text-center">
             <Upload className="mb-2 size-5 text-primary/60" />
-            <p className="text-xs text-muted-foreground">Drop .md files here</p>
+            <p className="text-xs text-muted-foreground">Drop .md / .pdf files here</p>
           </div>
         )}
 
@@ -217,7 +217,7 @@ export default function ProjectWorkspace() {
               >
                 <Upload className="mb-2 size-5 opacity-40" />
                 <p className="text-xs text-muted-foreground">
-                  Click or drag .md files here
+                  Click or drag .md / .pdf files here
                 </p>
               </div>
             ) : (

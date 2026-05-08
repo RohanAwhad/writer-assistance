@@ -1,10 +1,13 @@
 import asyncio
 import json
+import tempfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, UploadFile
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.ai import (
@@ -15,6 +18,7 @@ from app.ai import (
     generate_tone_variations,
 )
 from app.db import execute, fetch_all, fetch_one, init_db
+from app.pdf import convert_pdf_to_markdown
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +67,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+STATIC_DIR = Path(__file__).parent.parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 # ---------------------------------------------------------------------------
 # Projects
@@ -109,11 +117,35 @@ async def list_resources(project_id: int):
 async def upload_resources(project_id: int, files: list[UploadFile]):
     created = []
     for f in files:
-        content = (await f.read()).decode("utf-8")
-        resource_id = await execute(
-            "INSERT INTO resources (project_id, filename, path, content) VALUES (?, ?, ?, ?)",
-            (project_id, f.filename, f.filename, content),
-        )
+        filename = f.filename or "upload"
+
+        if filename.lower().endswith(".pdf"):
+            # Save PDF to temp file, convert with docling, then clean up
+            raw = await f.read()
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(raw)
+                tmp_path = tmp.name
+
+            # Insert a placeholder row first to get the resource_id for image paths
+            resource_id = await execute(
+                "INSERT INTO resources (project_id, filename, path, content) VALUES (?, ?, ?, ?)",
+                (project_id, filename, filename, ""),
+            )
+
+            content, _image_paths = convert_pdf_to_markdown(tmp_path, resource_id)
+            Path(tmp_path).unlink(missing_ok=True)
+
+            await execute(
+                "UPDATE resources SET content = ? WHERE id = ?",
+                (content, resource_id),
+            )
+        else:
+            content = (await f.read()).decode("utf-8")
+            resource_id = await execute(
+                "INSERT INTO resources (project_id, filename, path, content) VALUES (?, ?, ?, ?)",
+                (project_id, filename, filename, content),
+            )
+
         row = await fetch_one("SELECT * FROM resources WHERE id = ?", (resource_id,))
         created.append(row)
     return created
