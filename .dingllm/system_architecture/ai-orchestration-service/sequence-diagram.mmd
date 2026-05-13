@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor App as Application Server
+    participant Router as Service Router
+    participant Engine as CritiqueEngine
+    participant Prompts as PromptManager
+    participant Adapter as LLMAdapter
+    participant Provider as External LLM (OpenAI)
+
+    App->>Router: POST /task {type: "critique", block: "Text..."}
+    
+    activate Router
+    Router->>Engine: execute(request)
+    activate Engine
+    
+    Engine->>Prompts: getTemplate("red_team_critique")
+    activate Prompts
+    Prompts-->>Engine: return "Review this paragraph: {{text}}"
+    deactivate Prompts
+    
+    Engine->>Engine: injectVariables(template, request.block)
+    
+    Engine->>Adapter: generateResponse(finalPrompt, "openai")
+    activate Adapter
+    Adapter->>Provider: API Call (with retries/auth)
+    activate Provider
+    Provider-->>Adapter: JSON Response (Critique data)
+    deactivate Provider
+    Adapter-->>Engine: Parsed JSON
+    deactivate Adapter
+    
+    Engine-->>Router: TaskResponse (Success)
+    deactivate Engine
+    
+    Router-->>App: HTTP 200 {critique: "..."}
+    deactivate Router
