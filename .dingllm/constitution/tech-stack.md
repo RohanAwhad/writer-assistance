@@ -27,3 +27,48 @@ To maintain modularity, the data layer is divided into three distinct stores bas
 ## 4. AI Orchestration Service
 * **LLM Providers:** OpenAI API (GPT-4o) and/or Anthropic API (Claude 3.5 Sonnet). Abstracted behind an `LLMAdapter` to prevent vendor lock-in.
 * **Prompt Management:** System prompts stored externally (YAML/DB) and injected dynamically by a Prompt Manager component.
+
+### Dependency Policy: Minimal External Dependencies
+* **No vendor SDKs.** Do not use OpenAI SDK, Anthropic SDK, Chroma SDK, or any provider-specific client library.
+* **Raw HTTP only.** All external service communication (LLM providers, Chroma, S3) goes through Go's standard `net/http` with a shared `http.Client`.
+* *Rationale:* SDKs add transitive dependencies, version churn, and hide the actual HTTP contract. Raw HTTP keeps the dependency tree shallow, makes the VCR fixture pattern trivial (just record/replay HTTP), and ensures we fully understand what goes over the wire.
+* **Allowed external deps:** Router library (`chi`/`Gin`), SQLite driver, standard tooling. Keep `go.mod` lean.
+
+## 5. Testing Strategy
+
+### Philosophy
+No mocks. Every test exercises real code paths. External services (LLM providers, Chroma DB) are handled via **recorded HTTP fixtures** (the VCR/cassette pattern), not mocks or live calls.
+
+### VCR / Recorded Fixture Pattern
+All components that make HTTP calls (`LLMAdapter`, `RAGEngine`) accept an injected `http.Client`. In tests, a custom `http.RoundTripper` replays saved HTTP responses from disk instead of hitting the network.
+
+* **Recording:** Run a one-time recording pass against real APIs (LLM providers, Chroma) to capture actual HTTP responses. Store them as JSON files under `testdata/fixtures/`.
+* **Replaying:** Tests inject the fixture-serving `http.Client`. The full code path executes for real—routing, prompt assembly, request building, response parsing—only the network transport is swapped.
+* **Re-recording:** When prompts, request shapes, or API versions change, re-record fixtures via `go test -run TestRecord -tags record` or a helper script.
+
+### What This Gives Us
+* **Deterministic:** Same response every time, no flaky tests from non-deterministic LLM output.
+* **Fast:** No network calls, no API keys needed in CI.
+* **Real data shapes:** Catches serialization/deserialization bugs that mocks would hide.
+* **No mocking:** All application code runs for real. Only the HTTP transport layer is swapped.
+* **No Docker in CI:** Even Chroma interactions use recorded fixtures. Docker is only needed during the one-time recording step.
+
+### Test Structure
+* **Integration tests (one per engine):** Full request flow through `ServiceRouter` -> engine -> `PromptManager` -> `RAGEngine` -> `LLMAdapter` -> fixture response. Validates the entire chain produces a valid `TaskResponse`.
+* **PromptManager unit tests:** Pure logic, no external calls. Tests template loading from real YAML files and variable injection.
+* **Router tests:** Unknown `task_type` returns error. Known types route to correct engine.
+* **Assertions on structure, not content:** Since LLM output is non-deterministic, tests assert on response shape (fields present, status ok, non-empty, correct types) rather than exact text.
+
+### Test Data Layout
+```
+testdata/
+  fixtures/
+    lens_openai_response.json
+    draft_openai_response.json
+    tone_openai_response.json
+    critique_openai_response.json
+    chroma_embed_response.json
+    chroma_query_response.json
+  resources/
+    sample_article.md          # small .md file for RAG ingestion tests
+```
