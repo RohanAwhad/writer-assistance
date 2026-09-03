@@ -2,11 +2,11 @@ schema_version: "0.1"
 
 project:
   id: writer_assistance_my_ux
-  root: /Users/rawhad/1_Projects/personal_projects/writer-assistance-my-ux
+  root: /home/rohan/1_Projects/writer-assistance
 
 snapshot:
   source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
-  captured_through: msg_068442646001f0O9a2Hsny82kW
+  captured_through: msg_0694cb2f5001jb2Usyosl1Gkqu
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -123,6 +123,120 @@ evidence:
     quote: >
       can you add another intent to the hai, that we want the view mode? like
       just how we have editing mode.
+  H23:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_069439927001PkMHc1351ndSn7
+    quote: >
+      I was thinking we should also deploy this as a webapp locally through a
+      container file.
+  H24:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_069463d52001OLeE3MOQRhS68h
+    quote: |
+      > cloudflare tunnel at it unless you mean to.
+      yes. we want to do it.
+  H25:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_069463d52001OLeE3MOQRhS68h
+    quote: "single container serving. dont do compose."
+  H26:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_069463d52001OLeE3MOQRhS68h
+    quote: >
+      And can we switch from claude-sonnet-5 to deepseek-v4-flash.
+      deepseek-v4-flash is openai compatible.
+  A3:
+    actor: agent
+    type: proposal
+    source_ref: msg_069466102001LptghIaexFFPGB
+    summary: >
+      Options for gating the publicly exposed app: Cloudflare Access Zero
+      Trust login (recommended) vs a minimal password/API-key gate inside
+      the container; the human chose the in-container gate.
+  H27:
+    actor: human
+    type: explicit_selection
+    source_ref: msg_06948bd1f001ZOT27gppz64RRO
+    proposal_ref: A3
+    quote: |
+      > minimal password/API-key gate inside the container.
+      we should do this. generate one and save it in .env and then show it
+      to me here, so i can login once and save it in my chrome browser
+  H28:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06948bd1f001ZOT27gppz64RRO
+    quote: |
+      > api.deepseek.com
+      use this endpoint
+  H29:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_0694935d2001T03ekRkMo9uwi9
+    quote: "also we have the key for deepseek in env var in ~/.bashrc"
+  A4:
+    actor: agent
+    type: proposal
+    source_ref: msg_069495d66001OqueMzvW2zWFZC
+    summary: >
+      Live AI provider arrangement after adding DeepSeek: clean swap to
+      DeepSeek-only (recommended) vs dual provider (AnthropicVertex +
+      DeepSeek) with an option to select which one to use; the human chose
+      the dual-provider arrangement.
+  A5:
+    actor: agent
+    type: proposal
+    source_ref: msg_069495d66001OqueMzvW2zWFZC
+    summary: >
+      Container data handling: bind-mount the existing backend/data DB
+      (recommended) vs start fresh with a named volume; the human chose a
+      fresh named volume.
+  H30:
+    actor: human
+    type: explicit_selection
+    source_ref: msg_0694b257b001InMg6urN1wbLV1
+    proposal_ref: A5
+    quote: "- start fresh with a named volume"
+  H31:
+    actor: human
+    type: explicit_selection
+    source_ref: msg_0694b257b001InMg6urN1wbLV1
+    proposal_ref: A4
+    quote: "- dual provider with option to select which one to use"
+  A6:
+    actor: agent
+    type: proposal
+    source_ref: msg_0694cb2f5001jb2Usyosl1Gkqu
+    summary: >
+      Auth gate mechanism: HTTP Basic Auth with a fixed username and the
+      API key as password (recommended) vs a custom login screen with a
+      session cookie; the human chose the custom login screen.
+  A7:
+    actor: agent
+    type: proposal
+    source_ref: msg_0694cb2f5001jb2Usyosl1Gkqu
+    summary: >
+      Provider-selection surface: env var read at container startup
+      (recommended) vs an in-app selector; the human chose the in-app
+      selector.
+  H32:
+    actor: human
+    type: explicit_selection
+    source_ref: prt_0694cc5b3001A7rgVd1kEEU23P
+    proposal_ref: A6
+    selections:
+      auth_mechanism: "Custom login screen"
+  H33:
+    actor: human
+    type: explicit_selection
+    source_ref: prt_0694cc5b3001A7rgVd1kEEU23P
+    proposal_ref: A7
+    selections:
+      provider_selection: "In-app selector"
 
 human_approved:
   intents:
@@ -264,6 +378,74 @@ human_approved:
             editing mode remains the typing surface.
           evidence: [H22]
 
+    - id: INT-006
+      scope: project
+      lifecycle: active
+      statement: >
+        Run the app as a single containerized webapp locally and expose it
+        publicly through a Cloudflare tunnel, protected by an in-app
+        API-key login.
+      evidence: [H23, H24, H25, H27, H30, H32]
+      decisions:
+        - id: DEC-019
+          statement: >
+            The deployment artifact is a single container serving the built
+            frontend and the FastAPI backend together; no docker compose.
+          evidence: [H25]
+        - id: DEC-020
+          statement: >
+            The app is exposed publicly via a Cloudflare tunnel to a public
+            hostname of rohanawhad.com; the exact subdomain is chosen by
+            the human (OQ-07).
+          evidence: [H24]
+        - id: DEC-021
+          statement: >
+            The container enforces a minimal password/API-key gate; a key
+            was generated and stored as AUTH_API_KEY in backend/.env
+            (gitignored) and shown to the human so the browser can log in
+            once.
+          evidence: [H27]
+        - id: DEC-022
+          statement: >
+            The gate is a custom login screen served by the app with a
+            session cookie, not browser Basic Auth.
+          evidence: [H32]
+        - id: DEC-023
+          statement: >
+            The container starts with a fresh database stored on a named
+            Docker volume, not the existing local data.
+          evidence: [H30]
+
+    - id: INT-007
+      scope: project
+      lifecycle: active
+      statement: >
+        Support multiple live AI providers behind the app's AI boundary —
+        the existing AnthropicVertex path and DeepSeek (OpenAI-compatible)
+        — with an in-app option to select which provider is used.
+      evidence: [H26, H28, H29, H31, H33]
+      decisions:
+        - id: DEC-024
+          statement: >
+            Keep the AnthropicVertex provider and add DeepSeek as a second
+            live provider (model deepseek-v4-flash, OpenAI-compatible),
+            selectable instead of claude-sonnet-5.
+          evidence: [H26, H31]
+        - id: DEC-025
+          statement: >
+            DeepSeek is reached at the api.deepseek.com endpoint.
+          evidence: [H28]
+        - id: DEC-026
+          statement: >
+            The DeepSeek API key is read from the DEEPSEEK_API_KEY env var
+            present in the human's ~/.bashrc.
+          evidence: [H29]
+        - id: DEC-027
+          statement: >
+            Provider choice is made in-app via a selector, not an
+            environment variable.
+          evidence: [H33]
+
 agent_context:
   research:
     - id: RES-001
@@ -293,6 +475,15 @@ agent_context:
         routes lens proposals, tone samples, critiques.
       basis: live_ai_integration_probe
       source_ref: msg_067ef378f001lYHPKPK63msdSL
+    - id: RES-003
+      intent_ids: [INT-007]
+      statement: >
+        This Linux host's shell config (~/.bashrc, not ~/.zshrc) exports
+        DEEPSEEK_API_KEY as well as ANTHROPIC_VERTEX_PROJECT_ID and
+        ANTHROPIC_* / VERTEX_LOCATION-style vars consistent with RES-001;
+        backend/.env (DEC-015) still takes precedence over all shell vars.
+      basis: shell_configuration_inspection
+      source_ref: msg_069495d66001OqueMzvW2zWFZC
 
   assumptions:
     - id: ASM-001
@@ -392,6 +583,44 @@ agent_context:
       status: agent_derived
       consequence: >
         Delegated two-way choice (two-way door delegation); spec OQ-06. Feature add later.
+    - id: ASM-012
+      intent_ids: [INT-007]
+      statement: >
+        The exact model id accepted by api.deepseek.com for
+        'deepseek-v4-flash' needs verification during build (alias-form
+        risk, cf. claude-opus-4-8[1m] rejection on Vertex).
+      status: unverified
+      consequence: >
+        Live AI calls fail with invalid-model errors until the canonical
+        model id is set.
+    - id: ASM-013
+      intent_ids: [INT-007]
+      statement: >
+        The in-app provider selector persists its choice per project or per
+        round; granularity is unresolved (OQ-08).
+      status: agent_derived
+      consequence: >
+        Storage/UI shape may need adjustment once the human picks the
+        granularity.
+    - id: ASM-014
+      intent_ids: [INT-006]
+      statement: >
+        Secrets (AUTH_API_KEY, DEEPSEEK_API_KEY) reach the container at
+        runtime via environment (e.g. -e / env file); the image bakes in no
+        secrets and nothing secret is committed.
+      status: agent_derived
+      consequence: >
+        If secrets get baked into the image or committed, key rotation and
+        an image rebuild are required.
+    - id: ASM-015
+      intent_ids: [INT-006]
+      statement: >
+        cloudflared runs on the host (existing tunnel) routing to the
+        container, which binds only 127.0.0.1.
+      status: agent_derived
+      consequence: >
+        The auth gate is the only public boundary; binding 0.0.0.0 would
+        expose the app on the LAN without the tunnel.
 
   observations:
     - id: OBS-001
@@ -424,7 +653,16 @@ agent_context:
         overridden by backend/.env (claude-sonnet-5) after app import;
         offline suite 68 passed; live AI gate 5/5; commit 0d426b1.
       source_ref: msg_067f4278a001ep3MoZ1tCCLaSo
+    - id: OBS-005
+      intent_ids: [INT-006]
+      statement: >
+        AUTH_API_KEY generated (secrets.token_urlsafe(32)) and appended to
+        backend/.env (gitignored, DEC-015); the key was shown to the human
+        in-session for saving in Chrome; no committed file holds the value.
+      source_ref: msg_069493224001yshx7lS5J1YFHD
 
   unapproved_actions: []
 
-open_questions: []
+open_questions:
+  - "OQ-07 [INT-006]: Which public hostname (subdomain of rohanawhad.com) should the Cloudflare tunnel route to the container?"
+  - "OQ-08 [INT-007]: What granularity should the in-app provider selector use — per project or per round?"
