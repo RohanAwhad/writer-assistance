@@ -89,6 +89,41 @@ describe("api client request mapping", () => {
     expect(err?.detail).toContain("explicit confirm");
   });
 
+  it("fetches resource annotations and round expert runs (reload hydration)", async () => {
+    const { calls } = stubFetch((call) => {
+      if (call.url.endsWith("/annotations")) {
+        return ok([
+          {
+            id: 1, doc_id: 9, kind: "note", start_offset: null, end_offset: null,
+            content: "thought", created_at: iso, updated_at: iso,
+          },
+        ]);
+      }
+      return ok({
+        expert_runs: [
+          {
+            id: 5, round_id: 1, doc_id: 3, doc_path: "a.md",
+            lens_proposal_id: 11, lens_rationale: "financial lens", lens_title: "financial",
+            notes: [
+              { id: 1, expert_run_id: 5, content: "n1", edited_content: null, review_state: "pending", merged: false, position: 0 },
+            ],
+          },
+        ],
+      });
+    });
+    const annotations = await api.getResourceAnnotations(9);
+    expect(annotations).toHaveLength(1);
+    expect(annotations[0]?.content).toBe("thought");
+    const runs = await api.getRoundExpertRuns(1);
+    expect(runs.expert_runs[0]?.lens_proposal_id).toBe(11);
+    expect(runs.expert_runs[0]?.lens_rationale).toBe("financial lens");
+    expect(runs.expert_runs[0]?.notes[0]?.merged).toBe(false);
+    expect(calls.map((c) => c.url)).toEqual([
+      "/api/v1/resources/9/annotations",
+      "/api/v1/rounds/1/expert-runs",
+    ]);
+  });
+
   it("marks lenses selected and runs experts for a round", async () => {
     const { calls } = stubFetch((call) => {
       if (call.url.includes("/lens-proposals/") && call.method === "PATCH") {

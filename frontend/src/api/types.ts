@@ -112,6 +112,7 @@ export interface ExpertNoteOut {
   content: string;
   edited_content: string | null;
   review_state: ExpertNoteState;
+  merged: boolean;
   position: number;
 }
 
@@ -120,6 +121,8 @@ export interface ExpertRunOut {
   round_id: number;
   doc_id: number;
   doc_path: string;
+  lens_proposal_id: number;
+  lens_rationale: string;
   lens_title: string;
   notes: ExpertNoteOut[];
 }

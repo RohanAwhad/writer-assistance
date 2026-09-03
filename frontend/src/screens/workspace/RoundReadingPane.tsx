@@ -11,6 +11,7 @@ interface RoundReadingPaneProps {
   docInRound: boolean;
   lens: LensDocState | null;
   experts: ExpertDocState;
+  onRetryExperts?: () => void;
   onProposeLenses: () => void;
   onSetProposalStatus: (proposalId: number, status: "selected" | "skipped") => void;
   onRunSelected: () => void;
@@ -27,6 +28,7 @@ export default function RoundReadingPane({
   docInRound,
   lens,
   experts,
+  onRetryExperts,
   onProposeLenses,
   onSetProposalStatus,
   onRunSelected,
@@ -70,6 +72,7 @@ export default function RoundReadingPane({
       expertRuns={experts.status === "ready" ? experts.runs : []}
       expertBusy={experts.status === "loading"}
       expertError={experts.status === "error" ? experts.error : null}
+      onRetryExperts={onRetryExperts}
       onProposeLenses={onProposeLenses}
       onSetProposalStatus={onSetProposalStatus}
       onRunSelected={onRunSelected}

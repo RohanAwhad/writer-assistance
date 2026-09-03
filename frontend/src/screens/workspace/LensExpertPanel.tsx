@@ -22,6 +22,7 @@ interface LensExpertPanelProps {
   expertRuns: ExpertRunOut[];
   expertBusy: boolean;
   expertError: string | null;
+  onRetryExperts?: () => void;
   onProposeLenses: () => void;
   onSetProposalStatus: (proposalId: number, status: "selected" | "skipped") => void;
   onRunSelected: () => void;
@@ -47,6 +48,7 @@ export default function LensExpertPanel({
   expertRuns,
   expertBusy,
   expertError,
+  onRetryExperts,
   onProposeLenses,
   onSetProposalStatus,
   onRunSelected,
@@ -120,7 +122,16 @@ export default function LensExpertPanel({
       </div>
 
       {actionError !== null && <InlineError message={actionError} />}
-      {expertError !== null && <InlineError message={expertError} />}
+      {expertError !== null && (
+        <div className="space-y-2">
+          <InlineError message={expertError} />
+          {onRetryExperts !== undefined && (
+            <Button size="sm" variant="outline" onClick={onRetryExperts}>
+              Retry
+            </Button>
+          )}
+        </div>
+      )}
 
       {!docInRound ? (
         <div className="rounded-md border p-2 text-sm text-muted-foreground">

@@ -104,6 +104,12 @@ export const api = {
     return request<ResourceOut>(`${BASE}/resources/${resourceId}`, { method: "GET" });
   },
 
+  async getResourceAnnotations(resourceId: number): Promise<AnnotationOut[]> {
+    return request<AnnotationOut[]>(`${BASE}/resources/${resourceId}/annotations`, {
+      method: "GET",
+    });
+  },
+
   async createHighlight(
     resourceId: number,
     body: { start_offset: number; end_offset: number; content?: string },
@@ -177,6 +183,10 @@ export const api = {
       method: "POST",
       body: { lens_proposal_ids: lensProposalIds },
     });
+  },
+
+  async getRoundExpertRuns(roundId: number): Promise<ExpertRunsOut> {
+    return request<ExpertRunsOut>(`${BASE}/rounds/${roundId}/expert-runs`, { method: "GET" });
   },
 
   async getExpertRunNotes(runId: number): Promise<ExpertRunOut> {

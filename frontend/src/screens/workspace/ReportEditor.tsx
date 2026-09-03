@@ -1,5 +1,5 @@
 import { Download, Feather, Loader2, MessageSquareWarning, Trash2, Wand2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../api/client";
 import type { ReportBlockOut, ReportOut, ToneSampleOut } from "../../api/types";
 import { Badge } from "../../components/ui/badge";
@@ -250,11 +250,13 @@ function BlockEditorCard({
   const [saveState, setSaveState] = useState<"clean" | "dirty" | "saving" | "failed">("clean");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const lastSyncedContent = useRef(block.content);
 
   useEffect(() => {
+    if (lastSyncedContent.current === block.content) return;
+    lastSyncedContent.current = block.content;
     if (saveState !== "dirty" && saveState !== "failed") setText(block.content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [block.content]);
+  }, [block.content, saveState]);
 
   const save = async (): Promise<void> => {
     if (text === block.content) {
@@ -340,7 +342,9 @@ function BlockEditorCard({
         {assist.tone.samples !== null && (
           <div className="space-y-2 rounded-md border border-primary/20 bg-muted/30 p-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">5 tone samples</span>
+              <span className="text-sm font-medium">
+                {assist.tone.samples.length} tone sample{assist.tone.samples.length === 1 ? "" : "s"}
+              </span>
               <Button size="sm" variant="ghost" onClick={onCloseTone}>
                 <X className="mr-1 h-3 w-3" />
                 Discard samples

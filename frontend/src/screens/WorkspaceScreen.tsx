@@ -1,5 +1,5 @@
 import { ArrowLeft, FileText } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   AnnotationOut,
@@ -127,8 +127,11 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
       }
       setDocLoadingId(docId);
       try {
-        const resource = await api.getResource(docId);
-        setDocs((prev) => ({ ...prev, [docId]: { resource, annotations: [] } }));
+        const [resource, annotations] = await Promise.all([
+          api.getResource(docId),
+          api.getResourceAnnotations(docId),
+        ]);
+        setDocs((prev) => ({ ...prev, [docId]: { resource, annotations } }));
         setLensByDoc((prev) => ({ ...prev, [docId]: { status: "loading", proposals: [], error: null } }));
         const proposals = await api.listLensProposals(docId);
         setLensByDoc((prev) => ({ ...prev, [docId]: { status: "ready", proposals, error: null } }));
@@ -198,6 +201,65 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
   const expertKey = activeRoundId !== null && activeDocId !== null ? `${activeRoundId}:${activeDocId}` : null;
   const expertState: ExpertDocState =
     expertKey !== null ? (expertsByRoundDoc[expertKey] ?? { status: "idle" }) : { status: "idle" };
+
+  useEffect(() => {
+    if (activeRoundId === null || activeDocId === null) return;
+    const detail = roundDetailStates[activeRoundId]?.detail;
+    if (detail === null || detail === undefined || detail.stage !== "reading") return;
+    if (!detail.docs.some((d) => d.id === activeDocId)) return;
+    const key = `${activeRoundId}:${activeDocId}`;
+    const current = expertsByRoundDoc[key];
+    if (current !== undefined && current.status !== "idle") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await api.getRoundExpertRuns(activeRoundId);
+        const runs = result.expert_runs.filter((r) => r.doc_id === activeDocId);
+        if (cancelled) return;
+        setExpertsByRoundDoc((prev) => {
+          const prevState = prev[key];
+          if (prevState === undefined || prevState.status === "idle") {
+            return { ...prev, [key]: { status: "ready", runs } };
+          }
+          if (prevState.status === "ready") {
+            const existingIds = new Set(prevState.runs.map((r) => r.id));
+            const fresh = runs.filter((r) => !existingIds.has(r.id));
+            return fresh.length === 0
+              ? prev
+              : { ...prev, [key]: { status: "ready", runs: [...prevState.runs, ...fresh] } };
+          }
+          return prev;
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setExpertsByRoundDoc((prev) => {
+          const prevState = prev[key];
+          if (prevState === undefined || prevState.status === "idle") {
+            return {
+              ...prev,
+              [key]: {
+                status: "error",
+                error: err instanceof ApiError ? err.detail : (err as Error).message,
+              },
+            };
+          }
+          return prev;
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRoundId, activeDocId, roundDetailStates, expertsByRoundDoc]);
+
+  const retryExpertLoad = (): void => {
+    if (expertKey === null) return;
+    setExpertsByRoundDoc((prev) => {
+      const current = prev[expertKey];
+      if (current === undefined || current.status !== "error") return prev;
+      return { ...prev, [expertKey]: { status: "idle" } };
+    });
+  };
 
   const proposeLensesForDoc = async (): Promise<void> => {
     const docId = activeDocId;
@@ -307,10 +369,9 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
     if (activeRoundId === null) {
       throw new ApiError(400, "no active round");
     }
-    const report = await api.generateReport(activeRoundId);
+    await api.generateReport(activeRoundId);
     setDumpByRound((prev) => ({ ...prev, [activeRoundId]: null }));
     await refreshRoundsAndRound();
-    void report;
     setMode("report");
   };
 
@@ -337,6 +398,41 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
     if (mode === "curate" && !modeAllowed.curate) setMode("doc");
     if (mode === "report" && !modeAllowed.report) setMode("doc");
   }, [mode, modeAllowed.curate, modeAllowed.report]);
+
+  const curatePrefetching = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (mode !== "curate") return;
+    const detail = roundDetailStates[activeRoundId ?? -1]?.detail;
+    if (detail === null || detail === undefined || detail.stage !== "reading") return;
+    const missing = detail.docs.filter(
+      (d) => docs[d.id] === undefined && d.id !== docLoadingId && !curatePrefetching.current.has(d.id),
+    );
+    if (missing.length === 0) return;
+    for (const d of missing) curatePrefetching.current.add(d.id);
+    let cancelled = false;
+    void (async () => {
+      await Promise.all(
+        missing.map(async (d) => {
+          try {
+            const [resource, annotations] = await Promise.all([
+              api.getResource(d.id),
+              api.getResourceAnnotations(d.id),
+            ]);
+            if (cancelled) return;
+            setDocs((prev) =>
+              prev[d.id] !== undefined ? prev : { ...prev, [d.id]: { resource, annotations } },
+            );
+          } catch {
+            curatePrefetching.current.delete(d.id);
+          }
+        }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, activeRoundId, roundDetailStates, docLoadingId, docs]);
 
   const poolAnnotations = useMemo(() => {
     const highlights: PoolItem[] = [];
@@ -521,6 +617,7 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
                   docInRound={docInRound}
                   lens={lensState}
                   experts={expertState}
+                  onRetryExperts={retryExpertLoad}
                   onProposeLenses={() => void proposeLensesForDoc()}
                   onSetProposalStatus={(proposalId, status) => void setProposalStatus(proposalId, status)}
                   onRunSelected={() => void runSelectedExperts()}
