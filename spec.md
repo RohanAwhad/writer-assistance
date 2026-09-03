@@ -1,7 +1,7 @@
 # Build Spec — writer-assistance webapp
 
 - Source of truth: `.hai/state.yaml` (capture commit 4031ecc) — evidence H1..H9, human-approved intents INT-001..004, decisions DEC-001..013.
-- Status: human-resolved draft v1.3. Date 2026-09-03. Version 1.3.
+- Status: draft v1.3 (human resolutions: OQ-01 import-snapshot, local single-user — 2026-09-03). Date 2026-09-03. Version 1.3.
 - Trace legend: every normative requirement is tagged `Trace: DEC-xx[, DEC-yy]`. Items marked `SD-nn` are agent-derived refinements (soft, reviewable, never override a DEC). Items marked `Depends on soft ASM-nn` rest on malleable agent assumptions and are not hard requirements.
 
 ## 1. Purpose & scope
@@ -41,7 +41,7 @@ A single-user webapp that helps the human write blogs/articles, letters, reports
 
 - R-040: A **button** ("Generate report") creates the report **from the curated notes dump** of the round (a single AI call whose input is the dump content). `Trace: DEC-010`
 - R-041: The generated report is stored at **paragraph granularity**: the paragraph is the unit **block**. `Trace: DEC-011` (Block storage: `Depends on soft ASM-004`.)
-- R-042: **After report creation the app shifts to editor mode**: the reading-round actions (annotating, running experts, curating) are closed/disabled for that report, and the report becomes the editing surface. `Trace: DEC-010, DEC-011`
+- R-042: **After report creation the round shifts to editor mode**: that round's reading actions (annotating, running experts, curating) are closed/disabled, and the report becomes the editing surface. `Trace: DEC-010, DEC-011`
 - R-043: In editor mode the human edits the report **manually, paragraph by paragraph** (block by block); typing is the primary edit path. `Trace: DEC-011`
 
 ### 2.6 Per-block AI assistance in editor mode — INT-004
