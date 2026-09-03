@@ -1,7 +1,7 @@
 # Build Spec — writer-assistance webapp
 
 - Source of truth: `.hai/state.yaml` (capture commit 4031ecc) — evidence H1..H9, human-approved intents INT-001..004, decisions DEC-001..013.
-- Status: human-resolved draft v1.2. Date 2026-09-03. Version 1.2.
+- Status: human-resolved draft v1.3. Date 2026-09-03. Version 1.3.
 - Trace legend: every normative requirement is tagged `Trace: DEC-xx[, DEC-yy]`. Items marked `SD-nn` are agent-derived refinements (soft, reviewable, never override a DEC). Items marked `Depends on soft ASM-nn` rest on malleable agent assumptions and are not hard requirements.
 
 ## 1. Purpose & scope
@@ -62,7 +62,7 @@ A single-user webapp that helps the human write blogs/articles, letters, reports
 | Monorepo layout `backend/` + `frontend/` | `Depends on soft ASM-006` | `SD-11`: create at repo root (absent in this workspace copy today) |
 | Local single-user deployment | Human-resolved 2026-09-03 | Runs on the human's machine (FastAPI + Vite); no auth, no hosting; AI creds from env vars |
 
-**Process/lifecycle model** (`SD-9`, agent-derived): a project has a persisted **stage**: `reading` → (report generated) `editing`. Stage is per-project; entering `editing` gates off reading actions (R-042). No data changes hands between modes except the report itself.
+**Process/lifecycle model** (`SD-9`, agent-derived): the **stage** lives on the round/report, not the project. A round starts in `reading`; when its report is generated, the round shifts to `editing`. Gating is per round: entering `editing` closes that round's reading actions (annotating, running experts, curation) (R-042). New rounds in the same project start fresh in `reading`, while an existing report keeps its editor; other rounds are unaffected. No data changes hands between stages except the report itself.
 
 **Concurrency model**: single user, one process; AI calls are HTTP-request-scoped; expert runs within a round may be parallelized (`Depends on soft ASM-002`).
 
@@ -72,14 +72,14 @@ Legend: **[M]** = decision-mandated entity/semantics; **[SD]** = agent-derived d
 
 | Entity | Semantics | Trace / basis |
 |---|---|---|
-| `Project` **[M]** | Container of a resource tree + human annotations + rounds; `name`, `stage` (SD-9), timestamps | DEC-005; INT-001 |
+| `Project` **[M]** | Container of a resource tree + human annotations + rounds; `name`, timestamps (no stage — the stage lives on the round, SD-9) | DEC-005; INT-001 |
 | `ResourceNode` **[M]** | Dir/file nodes of the project tree; Markdown files only; each file has content + relative path | DEC-005 |
 | `ResourceDoc.content` **[M]** | Markdown text **snapshot imported into app storage (SQLite)** when the tree is set up (R-012 read-only guarantee) | DEC-005/006 — human-resolved 2026-09-03: import into app |
 | `Annotation` **[M]** | Human-made; two kinds: `highlight` (range/offsets over doc snapshot) and `note` (free text, optional anchor to a highlight/range); authored by human only | DEC-006 |
 | `LensProposal` **[SD]** | AI-suggested lens per doc: title, rationale, status (proposed/selected/skipped); human confirms before experts run (SD-3) | DEC-007; `Depends on soft ASM-002` |
 | `ExpertRun` **[SD]** | Instance of one lens over one doc within a round; holds its own notes | DEC-007/008; `Depends on soft ASM-002` |
 | `ExpertNote` **[M]** | Note text (with optional snippet refs) produced by an `ExpertRun`; distinct from human annotations; review state (pending/accepted/discarded/merged-with-edits) | DEC-008 |
-| `ReadingRound` **[SD]** | Human-chosen set of docs; groups the joint reading (R-030); owns expert runs, dump, report | DEC-009 (round is implied by "this round of reading over a set of docs") |
+| `ReadingRound` **[SD]** | Human-chosen set of docs; groups the joint reading (R-030); owns expert runs, dump, report; carries the round `stage` `reading` → `editing` (flips when its report is generated; per round — SD-9) | DEC-009 (round is implied by "this round of reading over a set of docs") |
 | `NotesDumpEntry` **[M]** | Curated dump item; `kind` ∈ {snippet, highlight, human-thought, ai-thought}; source doc ref; ordering within dump | DEC-009 |
 | `NotesDump` **[SD]** | Ordered entry collection, one per round (1:1 with report per round — §9 OQ-02) | DEC-009; `Depends on soft ASM-003` |
 | `Report` **[M]** | Generated artifact from one dump; belongs to the round/project | DEC-010 |
@@ -98,7 +98,7 @@ Cardinalities **[SD]**: Project 1—N ResourceDoc · Project 1—N Round · Roun
 - **F5 — Expert note review** (R-022): review list per expert with actions: keep / discard / edit-and-add-to-human-notes (provenance preserved) (SD-4). `Trace: DEC-008`
 - **F6 — Round curation** (R-030, R-031): human picks the doc set for the round, then curates the notes dump — composing ordered entries of snippets, highlights, own thoughts, and AI thoughts (SD-5). `Trace: DEC-009`
 - **F7 — Generate report** (R-040): "Generate report" button → backend calls the AI with the dump → report created as ordered paragraphs. `Trace: DEC-010`
-- **F8 — Mode shift** (R-042): project enters editor mode; reading actions disabled. `Trace: DEC-010, DEC-011`
+- **F8 — Mode shift** (R-042): the round shifts to editor stage; that round's reading actions disabled; other rounds unaffected. `Trace: DEC-010, DEC-011`
 - **F9 — Manual editing** (R-043): blocks edited by typing, paragraph by paragraph. `Trace: DEC-011`
 - **F10 — Per-block tone** (R-050..R-051): on a block, "Change of tone" → 5 samples in different tones (AI-chosen tone labels, SD-7) using report context; preview and optionally apply one. `Trace: DEC-012`
 - **F11 — Per-block critique** (R-052..R-053): on a block, "Critique" → AI challenges the argument using report context; human rewrites based on it; repeatable (SD-8). `Trace: DEC-013`
@@ -115,8 +115,10 @@ All under `/api/v1`, JSON, **local single-user, no auth** (human-resolved 2026-0
 - `POST /rounds` — create round with doc set; `GET /rounds/{id}` (F6)
 - `POST /rounds/{id}/experts` (run confirmed lenses), `GET /expert-runs/{id}/notes`, `PATCH /expert-notes/{id}` (review state), `POST /expert-notes/{id}/merge` (F4, F5)
 - `POST /rounds/{id}/dump` (save curated ordered entries), `GET /rounds/{id}/dump` (F6)
-- `POST /rounds/{id}/generate-report` — returns report + blocks; flips project stage (F7, F8)
+- `POST /rounds/{id}/generate-report` — returns report + blocks; flips the round's stage (F7, F8)
 - `GET /reports/{id}` (blocks), `PUT /blocks/{id}` (manual edit) (F9)
+- `GET /reports/{id}/export.md` — download the report as Markdown (OQ-04; UC-12)
+- `DELETE /reports/{id}` — delete report; requires an explicit confirm payload (OQ-05; UC-13)
 - `POST /blocks/{id}/tone-samples` — returns 5 samples given report context (F10)
 - `POST /blocks/{id}/critique` — returns critique given report context (F11)
 
@@ -162,14 +164,14 @@ Door classes: **one-way** = irreversible/high-cost mistake, needed human input (
 | UC-04 | Run experts; review, discard, or adopt their notes | Human (AI produces notes) | Main | AI runs one expert per confirmed doc×lens; each expert keeps its own notes. Human reviews each note and chooses keep / discard / edit-and-add; adopted notes (including edited ones) merge into human notes with provenance kept (AI vs human origin). | F4, F5 (R-021, R-022) · DEC-007, DEC-008 |
 | UC-05 | Curate a round dump | Human | Main | Human picks the round's doc set, then curates the dump as ordered entries of kinds snippet, highlight, human-thought, ai-thought from per-doc pools plus free typing (SD-5); dump persists per round. | F6 (R-030, R-031) · DEC-009 |
 | UC-06 | Generate a report from the dump | Human (AI generates) | Main | Human presses "Generate report"; backend makes a single AI call whose input is the curated dump content; the result is stored as ordered paragraphs/blocks. | F7 (R-040, R-041) · DEC-010 |
-| UC-07 | Mode shift into editor | System | Main | After report creation the app shifts the round/project to the editor stage: reading actions (annotate, run experts, curate) are closed or disabled and the report becomes the editing surface. | F8 (R-042) · DEC-010, DEC-011 |
+| UC-07 | Mode shift into editor | System | Main | After report creation the round shifts to the editor stage: that round's reading actions (annotate, run experts, curate) are closed or disabled and the report becomes the editing surface; the gate is per round — other rounds and their reading actions are unaffected. | F8 (R-042) · DEC-010, DEC-011 |
 | UC-08 | Manually edit a paragraph block | Human | Main | Human edits the report paragraph by paragraph in the block editor; typing is the primary edit path; edits persist per block. | F9 (R-043) · DEC-011 |
 | UC-09 | Tone change: exactly 5 samples | Human (AI generates) | Variant | On a block, human requests a change of tone; AI returns exactly 5 samples in different tones (AI-chosen tone labels, SD-7) generated from the report context (target block + context); block text is unchanged until an explicit apply. | F10 (R-050, R-053) · DEC-012 |
 | UC-10 | Apply one sample | Human | Variant | Human previews the 5 samples and explicitly applies one; only that explicit action writes the sample into the block; no auto-replacement ever happens. | F10 (R-051) · DEC-012, DEC-011 |
 | UC-11 | Argument critique per block | Human (AI critiques) | Variant | On a block, human requests a critique; AI challenges the argument using the report context; output is shown read-only and never auto-edits the block; human rewrites manually; repeatable (SD-8). | F11 (R-052, R-053) · DEC-013, DEC-011 |
-| UC-12 | Download report as Markdown | Human | Main (terminal) | In editor mode, human downloads the report as a Markdown file (minimal export; no PDF/DOCX). | §9 OQ-04 (no §5 flow letter or §2 R-tag exists — export was resolved only as an OQ door) |
+| UC-12 | Download report as Markdown | Human | Main (terminal) | Human downloads the report as a Markdown file (minimal export; no PDF/DOCX). | §9 OQ-04 (no §5 flow letter or §2 R-tag exists — export was resolved only as an OQ door) |
 | UC-13 | Delete a report (round remains) | Human | Variant (exceptional) | Human deletes the report after an explicit confirm; the round and its dump remain; generation is one-shot per round, so a new report requires a new round (OQ-05). Post-delete stage behavior is unspecified (OQ-05 does not resolve it). | §9 OQ-05 (no §5/§2 tag — resolved only as an OQ door) |
-| UC-14 | Start a new round in an existing project | Human | Variant (iteration) | Human starts a new round in a project that already has a report: new doc set → new dump → new report; stage shift applies per round/report; rounds stay independent. | F6..F8 path, §9 OQ-02 (multi-round per project resolved only as an OQ door) |
+| UC-14 | Start a new round in an existing project | Human | Variant (iteration) | Human starts a new round in a project that already has a report: new doc set → new dump → new report; the new round starts in `reading` regardless of prior reports; stage shift applies per round/report; rounds stay independent. | F6..F8 path, §9 OQ-02 (multi-round per project resolved only as an OQ door) |
 
 Note on UC-12..UC-14: export, deletion, and multi-round reuse were resolved as §9 doors (OQ-04, OQ-05, OQ-02 — agent two-way choices), so they have no `Trace: DEC` chain and no normative R-tag in §2. They are in scope; giving them hard R-numbers or flow letters would require a human-approvable revision of §2/§5, deliberately not done here.
 
@@ -187,15 +189,17 @@ Scope note: spec-only — this section plans verification and adds no product re
 
 **Mock/env policy** (`SD-16`, agent-derived): CI runs fully offline. Every test that would touch AnthropicVertex mocks the AI-client wrapper (the single module boundary per R-004). Any test needing live RES-001 env vars is env-gated (marker/skip) and never part of the default CI run — CI must not depend on ASM-005.
 
+Stack requirements R-001 (FastAPI), R-002 (React + shadcn/ui), R-003 (SQLite), and R-005 (no kind-specific logic) are verified by dependency and static inspection at the §11.3 milestone gates rather than by dedicated automated suites.
+
 **Backend unit tests**:
 - AI-client wrapper (R-004): with the AnthropicVertex client mocked, all five call kinds — lens proposal, expert run, report generation, tone samples, critique — route through the wrapper; assert request payload shape and response parsing.
 - Dump→report input shaping (R-040, R-041): generation request is built from the round's curated dump entries only; the response parses into ordered blocks.
 - Tone request/parse (R-050, R-053): payload carries target block + report context; parsing enforces exactly 5 labeled samples.
 - Critique request/parse (R-052, R-053): payload carries block + report context; the call path never mutates the block (R-052).
 - Read-only invariant (R-011, R-012): drive a full reading → annotate → (mocked) generate → edit path at service level; assert the imported resource snapshot is byte-identical throughout and no code path writes resource content.
-- Schema/CRUD round-trips: project, resources, rounds, dump entries, blocks; stage transition `reading`→`editing`; after the shift, reading-stage operations are rejected (R-042 gate).
+- Schema/CRUD round-trips: project, resources, rounds, dump entries, blocks; per-round stage transition `reading`→`editing`; after the shift, that round's reading-stage operations are rejected, while a new round in the same project starts in `reading` with them open again (R-042 gate).
 
-**Backend API tests** (TestClient, AI mocked) — §6 endpoint coverage per flow: import scan + tree (F1), annotations CRUD (F2), lens proposals + expert runs + merge-with-provenance (F3..F5), dump save/get (F6), generate-report returns blocks and flips stage (F7/F8), block PUT persists manual edits (F9), tone-samples returns exactly 5 (F10), critique returns text without editing the block (F11), delete-report requires an explicit confirm payload (OQ-05).
+**Backend API tests** (TestClient, AI mocked) — §6 endpoint coverage per flow: import scan + tree (F1), annotations CRUD (F2), lens proposals + expert runs + merge-with-provenance (F3..F5), dump save/get (F6), generate-report returns blocks and flips the round's stage (F7/F8), block PUT persists manual edits (F9), tone-samples returns exactly 5 (F10), critique returns text without editing the block (F11), delete-report requires an explicit confirm payload (OQ-05).
 
 **Frontend component tests** (vitest + RTL; network mocked at the api-client boundary):
 - api client maps frontend calls to the §6 endpoints.
@@ -203,7 +207,7 @@ Scope note: spec-only — this section plans verification and adds no product re
 - Tone-sample preview/apply (R-051): samples render while block text stays unchanged; content changes only when the human explicitly applies one sample.
 - Critique panel (R-052): critique renders read-only; no control auto-edits the block.
 - Curation entry list (R-031): entries add/reorder/save in dump order.
-- Reading-mode gating (R-042): after the stage shift, reading/curation UI is absent or disabled.
+- Reading-mode gating (R-042): after a round's stage shift, that round's reading/curation UI is absent or disabled; a new round in the same project shows the reading UI again.
 
 **Coverage map** (behavior-critical requirements → covering automatic test):
 
@@ -231,14 +235,14 @@ Precondition: backend + frontend running locally; the backend process must have 
 3. **Lens proposal**: request AI lenses on one doc. → R-020. Expected: a short list of sensible lens proposals with rationale; confirm 2 of them.
 4. **Experts + review**: run the confirmed experts; in the review list discard one note and edit-and-add another to the human notes. → R-021, R-022. Expected: expert notes appear per expert; the adopted (edited) note appears in human notes and keeps its AI-origin marker in the dump.
 5. **Curate dump**: start a round over 2 docs; compose a dump with ≥1 entry of each kind (snippet, highlight, human-thought, ai-thought) in a chosen order; save. → R-030, R-031. Expected: dump persists and renders in the saved order.
-6. **Generate + mode shift**: press "Generate report". → R-040, R-042. Expected: a report appears as paragraphs; the UI is now in editor mode — annotate/run-expert/curate controls are gone or disabled.
+6. **Generate + mode shift**: press "Generate report". → R-040, R-042. Expected: a report appears as paragraphs; the UI is now in editor mode for this round — this round's annotate/run-expert/curate controls are gone or disabled.
 7. **Manual edit**: edit two paragraphs by typing; reload the page. → R-043. Expected: edits persist per block.
 8. **Tone request**: on a block choose change of tone. → R-050, R-053. Expected: exactly 5 samples with distinct tone labels whose wording reflects the report context; block text is unchanged.
 9. **Apply sample**: apply one sample. → R-051. Expected: only that block's text becomes the chosen sample; the other 4 are discarded.
 10. **Critique**: on another block request a critique. → R-052, R-053. Expected: a substantive challenge that references the report context; block text unchanged; manual rewrite works.
 11. **Export**: download the report as Markdown; open the file. → §9 OQ-04. Expected: valid Markdown with paragraphs in report order.
 12. **Delete report**: attempt delete and cancel in the confirm dialog; then delete with confirm. → §9 OQ-05. Expected: cancel path deletes nothing; after confirm the report is gone while the round and its dump remain listed.
-13. **New round**: in the same project start a new round, pick docs, generate a second report. → §9 OQ-02. Expected: a second, independent report exists; the first round's report and dump are untouched.
+13. **New round**: in the same project start a new round, pick docs, generate a second report. → §9 OQ-02. Expected: the new round starts in `reading` — its annotate/run-expert/curate controls are open again; a second, independent report exists; the first round's report and dump are untouched.
 
 ### 11.3 Verification gates — when a milestone counts as "done"
 
