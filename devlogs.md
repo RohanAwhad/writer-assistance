@@ -110,3 +110,24 @@
 - Observations: round-doc checkboxes default all-checked; label click toggled unexpected rows
   (test-script quirk, not app bug). Console 404 = favicon only. Rounds list shows "· dump"
   once the round's dump exists.
+
+## 2026-09-03 — Spec v1.6: view mode intent (INT-005/DEC-018) + state alignment
+
+- Human added new intent (H22, commit 733562d): report **view mode** alongside editing mode
+  (INT-005/DEC-018, "like just how we have editing mode").
+- Spec loop (writer ↔ fresh reviewer, 2 rounds):
+  - Writer r1 → v1.6: §2.7 **R-060/R-061** (Trace: DEC-018), **F12**, **UC-15/16**, **SD-18/19**
+    (view = ephemeral client sub-mode of the report surface; no new persistence, no stage
+    change — SD-9/DEC-011 intact); §11.1 coverage-map rows, manual step 14 (13→14 gates).
+    Also repaired pre-existing staleness: header source-of-truth, phantom **ASM-006** removed,
+    §7 synced to real ASM-001..005 + 007..011, monorepo wording, evidence-set mentions.
+  - Reviewer r1 → **FAIL**: R1F1 blocker — DEC-015/DEC-017 (config/.env, vertex wiring) absent
+    from spec body; §11.2 still said "env vars exported", contradicting DEC-015 .env mechanism.
+  - Writer r2: **DEC-015** (.env via load_dotenv override=True, precedence) + **DEC-017**
+    (anthropic[vertex] extra, claude-sonnet-5 live model) added as §3 rows + R-004 parenthetical
+    + §11.2 precondition + §11.3 gate; **R-042** gate scoped to round-bound ops (expert runs,
+    curation) — annotating stays resource-scoped/open per DEC-006; ASM-003→ASM-008 repoint on
+    R-031/§4 NotesDump; trace legend accepts INT-xx.
+  - Reviewer r2 → **PASS** (3 cosmetic NITs disclosed: DEC-014/016 not id-tagged, UC-15 kind
+    label, R-060 embeds SD-2 styling clause — not fixed).
+- Handoff returned; spec v1.6 committed; next: hai-build-loop for view-mode milestone.
