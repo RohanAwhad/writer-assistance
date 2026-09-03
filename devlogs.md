@@ -79,3 +79,12 @@
 - Open for Rohan: ANTHROPIC_MODEL env = `claude-opus-4-8[1m]` (Claude Code alias form) is
   rejected by Vertex; integration ran with `claude-sonnet-5`. Canonical env value decision pending.
 - Residual: manual UI click-through (visual/UX) not yet done by human.
+
+## 2026-09-03 — .env config precedence (human decision)
+
+- Human: backend should load `.env` via load_dotenv, `.env` takes precedence over shell env.
+- Code: `load_dotenv(override=True)` in backend/app/main.py; python-dotenv dep added;
+  backend/.env (gitignored, model fixed to claude-sonnet-5) + backend/.env.example committed.
+- Verified: shell ANTHROPIC_MODEL still `claude-opus-4-8[1m]` (broken alias) → after app
+  import resolves to claude-sonnet-5; offline suite 68 pass; live AI gate 5/5 (37s).
+- .hai: RES-001/ASM-005 updated (agent context; ASM-005 status resolved).

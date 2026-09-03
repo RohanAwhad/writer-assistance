@@ -191,12 +191,15 @@ agent_context:
     - id: RES-001
       intent_ids: [INT-001]
       statement: >
-        ~/.zshrc exports the Anthropic Vertex environment
-        (ANTHROPIC_VERTEX_PROJECT_ID, ANTHROPIC_MODEL,
-        ANTHROPIC_SMALL_FAST_MODEL, GOOGLE_VERTEX_LOCATION, VERTEX_ACCESS_TOKEN
-        helpers, ANTHROPIC_BASE_URL, ANTHROPIC_CUSTOM_MODEL_OPTION*) needed
-        for an AnthropicVertex client.
-      basis: environment_configuration_inspection
+        Runtime configuration comes from environment variables, loaded from a
+        backend/.env file via python-dotenv with override=True (human decision
+        2026-09-03: .env takes precedence over shell-exported vars, because the
+        shell's ANTHROPIC_MODEL form 'claude-opus-4-8[1m]' is a Claude Code
+        alias invalid for direct Vertex calls). Names: ANTHROPIC_VERTEX_PROJECT_ID,
+        ANTHROPIC_MODEL, ANTHROPIC_SMALL_FAST_MODEL, GOOGLE_VERTEX_LOCATION
+        (alias VERTEX_LOCATION), VERTEX_ACCESS_TOKEN, ANTHROPIC_BASE_URL,
+        ANTHROPIC_CUSTOM_MODEL_OPTION*.
+      basis: human_instruction + environment_configuration_inspection
       source_ref: msg_06754d782001f33sBRQfAuGb6O
 
   assumptions:
@@ -241,13 +244,16 @@ agent_context:
     - id: ASM-005
       intent_ids: [INT-001]
       statement: >
-        Verification of the AnthropicVertex env vars came from ~/.zshrc;
-        the vars still need to be exported and valid in the runtime
-        environment where the backend runs.
-      status: unverified
+        Verification of the AnthropicVertex env vars came from ~/.zshrc; the
+        vars still need to be exported and valid in the runtime environment
+        where the backend runs. Resolved 2026-09-03: backend loads backend/.env
+        (python-dotenv, override=True, .env wins); .env.example documents the
+        names; a valid Vertex model id must be used (alias forms like
+        'claude-opus-4-8[1m]' are rejected).
+      status: resolved
       consequence: >
         Backend AI calls may fail at first run if the env vars are not
-        loaded into the process.
+        loaded into the process; keep .env current with valid Vertex ids.
     - id: ASM-006
       intent_ids: [INT-001]
       statement: >

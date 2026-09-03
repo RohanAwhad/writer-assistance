@@ -5,12 +5,15 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app import db
 from app.api import projects, reports, rounds
 from app.errors import ApiError
+
+load_dotenv(override=True)
 
 DEFAULT_DB_PATH = "data/writer-assistance.db"
 ENV_DB_PATH = "WRITER_ASSISTANCE_DB"
