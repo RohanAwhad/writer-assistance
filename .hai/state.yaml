@@ -6,7 +6,7 @@ project:
 
 snapshot:
   source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
-  captured_through: msg_068141a46001Mo7mjMNOjVa4pc
+  captured_through: msg_068409144001XOOu5Jri7MT18u
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -111,6 +111,11 @@ evidence:
     quote: >
       we should use `.env` so that load_dotenv fixes this. and .env should
       take precedence
+  H21:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_068409144001XOOu5Jri7MT18u
+    quote: approve this!
 
 human_approved:
   intents:
@@ -147,6 +152,13 @@ human_approved:
             python-dotenv with override=True; .env takes precedence over
             shell-exported env vars; .env.example documents the names.
           evidence: [H18]
+        - id: DEC-017
+          statement: >
+            Backend AI uses the anthropic[vertex] extra (anthropic[google]
+            is invalid for SDK 1.x) and claude-sonnet-5 as the Vertex model
+            for live AI runs; the integration subagent's choices are
+            retroactively approved by the human.
+          evidence: [H21]
 
     - id: INT-002
       scope: project
@@ -391,16 +403,6 @@ agent_context:
         offline suite 68 passed; live AI gate 5/5; commit 0d426b1.
       source_ref: msg_067f4278a001ep3MoZ1tCCLaSo
 
-  unapproved_actions:
-    - id: ACT-001
-      intent_ids: [INT-001]
-      statement: >
-        The integration subagent changed the backend dependency extra
-        (anthropic[google] -> anthropic[vertex]) and chose to run live tests
-        with model claude-sonnet-5 without prior explicit human approval;
-        both were necessary to proceed, surfaced to the human afterwards,
-        and committed (649d450) with the .env model decision following
-        later (0d426b1).
-      source_ref: msg_067ef378f001lYHPKPK63msdSL
+  unapproved_actions: []
 
 open_questions: []
