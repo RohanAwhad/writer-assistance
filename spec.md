@@ -1,14 +1,14 @@
 # Build Spec — writer-assistance webapp
 
 - Source of truth: `.hai/state.yaml` (capture commit 4031ecc) — evidence H1..H9, human-approved intents INT-001..004, decisions DEC-001..013.
-- Status: draft for review. Version 1.0. Date 2026-09-03.
+- Status: human-resolved draft v1.1. Date 2026-09-03. Version 1.1.
 - Trace legend: every normative requirement is tagged `Trace: DEC-xx[, DEC-yy]`. Items marked `SD-nn` are agent-derived refinements (soft, reviewable, never override a DEC). Items marked `Depends on soft ASM-nn` rest on malleable agent assumptions and are not hard requirements.
 
 ## 1. Purpose & scope
 
 A single-user webapp that helps the human write blogs/articles, letters, reports and docs (INT-001). Writing work is organized as **projects** containing read-only Markdown resource trees the human reads and annotates (INT-002). A joint human–AI **reading round** over a chosen set of docs runs AI **expert lenses** whose notes the human reviews, discards, or adopts (possibly modified) into their own notes, and ends in a human-curated **notes dump** (snippets, highlights, human thoughts, AI thoughts) (INT-003). A **button** generates a report from the dump, then the app **shifts to an editor mode** where the report is edited manually paragraph-by-paragraph, with per-block AI options: a tone change producing **5 samples** and an argument **critique/challenge** (INT-004).
 
-**Non-goals** (deliberate exclusions — no human evidence mandates them): authentication, multi-user, teams, sharing, roles; billing/plugins/marketplaces; mobile apps; any editing/deleting/renaming/write-back of resource files; non-Markdown resource types; real-time collaboration; document export pipelines (see OQ-04).
+**Non-goals** (deliberate exclusions — no human evidence mandates them): authentication, multi-user, teams, sharing, roles; billing/plugins/marketplaces; mobile apps; any editing/deleting/renaming/write-back of resource files; non-Markdown resource types; real-time collaboration; document export beyond minimal Markdown download (see §9 OQ-04). The app is **local single-user** (human-resolved 2026-09-03).
 
 ## 2. Normative requirements
 
@@ -60,6 +60,7 @@ A single-user webapp that helps the human write blogs/articles, letters, reports
 | SQLite database | DEC-003 | Single file; all entities below persisted |
 | AnthropicVertex client for **every** AI call | DEC-004 | One client wrapper module; env-var credentials per RES-001; `Depends on soft ASM-005` |
 | Monorepo layout `backend/` + `frontend/` | `Depends on soft ASM-006` | `SD-11`: create at repo root (absent in this workspace copy today) |
+| Local single-user deployment | Human-resolved 2026-09-03 | Runs on the human's machine (FastAPI + Vite); no auth, no hosting; AI creds from env vars |
 
 **Process/lifecycle model** (`SD-9`, agent-derived): a project has a persisted **stage**: `reading` → (report generated) `editing`. Stage is per-project; entering `editing` gates off reading actions (R-042). No data changes hands between modes except the report itself.
 
@@ -73,14 +74,14 @@ Legend: **[M]** = decision-mandated entity/semantics; **[SD]** = agent-derived d
 |---|---|---|
 | `Project` **[M]** | Container of a resource tree + human annotations + rounds; `name`, `stage` (SD-9), timestamps | DEC-005; INT-001 |
 | `ResourceNode` **[M]** | Dir/file nodes of the project tree; Markdown files only; each file has content + relative path | DEC-005 |
-| `ResourceDoc.content` **[SD]** | Markdown text **snapshot imported into SQLite** when the tree is set up (R-012 read-only guarantee); `Depends on soft ASM-001` flow | DEC-005/006 — see OQ-01 |
+| `ResourceDoc.content` **[M]** | Markdown text **snapshot imported into app storage (SQLite)** when the tree is set up (R-012 read-only guarantee) | DEC-005/006 — human-resolved 2026-09-03: import into app |
 | `Annotation` **[M]** | Human-made; two kinds: `highlight` (range/offsets over doc snapshot) and `note` (free text, optional anchor to a highlight/range); authored by human only | DEC-006 |
 | `LensProposal` **[SD]** | AI-suggested lens per doc: title, rationale, status (proposed/selected/skipped); human confirms before experts run (SD-3) | DEC-007; `Depends on soft ASM-002` |
 | `ExpertRun` **[SD]** | Instance of one lens over one doc within a round; holds its own notes | DEC-007/008; `Depends on soft ASM-002` |
 | `ExpertNote` **[M]** | Note text (with optional snippet refs) produced by an `ExpertRun`; distinct from human annotations; review state (pending/accepted/discarded/merged-with-edits) | DEC-008 |
 | `ReadingRound` **[SD]** | Human-chosen set of docs; groups the joint reading (R-030); owns expert runs, dump, report | DEC-009 (round is implied by "this round of reading over a set of docs") |
 | `NotesDumpEntry` **[M]** | Curated dump item; `kind` ∈ {snippet, highlight, human-thought, ai-thought}; source doc ref; ordering within dump | DEC-009 |
-| `NotesDump` **[SD]** | Ordered entry collection, one per round (1:1 with report per round — see OQ-02) | DEC-009; `Depends on soft ASM-003` |
+| `NotesDump` **[SD]** | Ordered entry collection, one per round (1:1 with report per round — §9 OQ-02) | DEC-009; `Depends on soft ASM-003` |
 | `Report` **[M]** | Generated artifact from one dump; belongs to the round/project | DEC-010 |
 | `ReportBlock` **[M]** | One paragraph of the report; `content`, `position`; editable manually; optional links back to source dump entries/docs | DEC-011; block links `Depends on soft ASM-004` |
 | `ToneSampleSet` **[SD]** | Result of a tone request: exactly 5 samples with tone labels + target block; **transient** (regenerated per request; not persisted) | DEC-012 (SD-7) |
@@ -90,7 +91,7 @@ Cardinalities **[SD]**: Project 1—N ResourceDoc · Project 1—N Round · Roun
 
 ## 5. User flows
 
-- **F1 — Set up project** (R-010, R-011): create project → import/scan its Markdown tree (SD-1, `Depends on soft ASM-001`) → resources appear read-only. `Trace: DEC-005, DEC-006`
+- **F1 — Set up project** (R-010, R-011): create project → **import** its Markdown tree into app storage (snapshot; human-resolved 2026-09-03) → resources appear read-only. `Trace: DEC-005, DEC-006`
 - **F2 — Read & annotate** (R-011, R-012): open a resource in a rendered Markdown view (SD-2); select text to highlight; attach notes; nothing writes back to the file. `Trace: DEC-006`
 - **F3 — Lens proposal** (R-020): human asks AI for lenses on a doc; proposals listed per doc; human confirms which to run (SD-3). `Trace: DEC-007`
 - **F4 — Expert runs** (R-021): AI experts (one per doc×lens) read the docs and produce their own notes. `Trace: DEC-007, DEC-008`
@@ -104,7 +105,7 @@ Cardinalities **[SD]**: Project 1—N ResourceDoc · Project 1—N Round · Roun
 
 ## 6. API surface sketch — DRAFT (backend endpoints the UI needs; shapes not final)
 
-All under `/api/v1`, JSON, single-user (no auth). Sketched per flow; final shape left to implementation.
+All under `/api/v1`, JSON, **local single-user, no auth** (human-resolved 2026-09-03). Sketched per flow; final shape left to implementation.
 
 - `POST /projects`, `GET /projects`, `GET /projects/{id}` — project CRUD (F1)
 - `POST /projects/{id}/scan` — import resource tree snapshot (F1, SD-1)
@@ -124,7 +125,7 @@ All under `/api/v1`, JSON, single-user (no auth). Sketched per flow; final shape
 | ID | Wording used in spec | Status | Referenced by |
 |---|---|---|---|
 | ASM-001 | Reading UI is a multi-stage flow (browse, read/annotate, run experts, review) | depended-on (soft) | F1..F6, §4 |
-| ASM-002 | Experts = parallel structured LLM calls, one lens each, notes stored per project/resource/expert | depended-on (soft) | R-021, §3, F3/F4, OQ-06 |
+| ASM-002 | Experts = parallel structured LLM calls, one lens each, notes stored per project/resource/expert | depended-on (soft) | R-021, §3, F3/F4, §9 OQ-06 |
 | ASM-003 | Expert-note review = list UI with accept/reject/edit merging into human notes | depended-on (soft) | R-022, R-031, F5/F6 |
 | ASM-004 | Report stored at paragraph (block) granularity with links to source notes/resources | depended-on (soft) | R-041, §4, F9 |
 | ASM-005 | AnthropicVertex env vars valid in the backend runtime | depended-on (soft) | R-004, §3 |
@@ -134,11 +135,15 @@ All under `/api/v1`, JSON, single-user (no auth). Sketched per flow; final shape
 
 No revisions made. All six assumptions are used as worded in `.hai/state.yaml`; none conflicted with the decisions or with each other, and the spec's agent-derived details were written to stay consistent with them.
 
-## 9. Open questions (for the human)
+## 9. Open questions — RESOLVED (2026-09-03)
 
-- **OQ-01 — Resource storage**: spec default (SD-1) snapshots Markdown content into SQLite at scan time (stable anchors for highlights, strong read-only guarantee). Alternative: reference files on disk live. Would change the data model (§4).
-- **OQ-02 — Rounds/reports per project**: spec default is multiple rounds per project, each with one dump and one report; the stage shift (R-042) applies after a report exists. If only one report ever exists per project, the model can shrink.
-- **OQ-03 — Curation semantics**: spec default (SD-5) is an ordered-entry editor fed by per-doc pools (human notes, accepted expert notes, highlights/snippets). If curation is meant as a free-form scratchpad instead, F6 and the dump API change.
-- **OQ-04 — Export**: is getting the final report out of the app (copy to clipboard / download as Markdown) in scope for v1?
-- **OQ-05 — Regeneration**: after mode shift, may the human regenerate the report (replacing blocks) or is generation one-shot per round? Editing work would be lost on regenerate.
-- **OQ-06 — Lens control**: spec default is AI-proposed lenses only, human confirms before running (per ASM-002). Should the human also be able to define custom lenses by hand in v1?
+Door classes: **one-way** = irreversible/high-cost mistake, needed human input (asked); **two-way** = rectifiable, agent chose best option, human may veto at any time.
+
+| OQ | Decision | Who/how | Reversal cost |
+|---|---|---|---|
+| OQ-01 Resource storage | **Import into app**: project setup snapshots the Markdown tree into app storage (SQLite). External file changes after import are not tracked. Highlights/notes anchor to the snapshot. | Human (asked, one-way-style) | Re-pointing to live disk later = re-import + anchor migration |
+| OQ-02 Rounds/reports per project | Multiple rounds per project; each round has 1 dump → 1 report. Stage shift applies per round/report. | Agent (two-way) | Trivial to restrict later |
+| OQ-03 Curation semantics | Dump = ordered list of typed entries {snippet, highlight, human-thought, ai-thought}, built from per-doc pools + free typing (SD-5). | Agent (two-way) | UI/UX reshape, storage unchanged |
+| OQ-04 Export | Minimal in scope: **download report as Markdown**. No PDF/DOCX pipelines. | Agent (two-way) | Feature add/remove |
+| OQ-05 Regeneration | Generation is **one-shot per round**; no destructive regenerate. New report = new round. Deleting a report allowed with confirm. | Agent (two-way) | Add regenerate later if wanted |
+| OQ-06 Lens control | **AI-proposed lenses only** in v1 (human confirms which run). Hand-defined lenses deferred; schema keeps a hook. | Agent (two-way) | Feature add later |

@@ -18,3 +18,16 @@
 - Spec leaves 6 open questions for the human: OQ-01 resource storage (disk refs vs DB snapshot),
   OQ-02 rounds/reports per project, OQ-03 curation entry mechanics, OQ-04 export scope,
   OQ-05 regeneration after mode shift, OQ-06 custom human-defined lenses.
+
+## 2026-09-03 — OQs resolved; discovery of origin/main
+
+- Discovery: `origin/main` holds a working v1 ("Writer's Desk", 2026-05-06) of the same
+  app built the old way. Human decision: do NOT copy main — this branch + .hai harness is
+  the experiment; main stays as prior art only. Pushed spec commits to origin/built-using-hai.
+- Door-classified the 6 OQs (Amazon one-way/two-way). Human answered (one-way style, asked):
+  - OQ-01: **Import into app (snapshot)** — project setup imports markdown tree into SQLite.
+  - Run context: **local single-user**, no auth.
+- Agent 2-way decisions (human may veto): OQ-02 multiple rounds/project (1 round = 1 dump + 1 report);
+  OQ-03 dump = ordered typed-entry list from pools; OQ-04 minimal md export in scope;
+  OQ-05 one-shot generation per round, delete report w/ confirm; OQ-06 AI-proposed lenses only v1.
+- spec.md bumped to v1.1 with a Resolved-decisions table (§9).
