@@ -1,0 +1,271 @@
+schema_version: "0.1"
+
+project:
+  id: writer_assistance_my_ux
+  root: /Users/rawhad/1_Projects/personal_projects/writer-assistance-my-ux
+
+snapshot:
+  source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
+  captured_through: msg_0675a2edd001IHqFArCO1u6Bah
+  semantics: current_state_at_capture
+  superseded_entries: omitted
+  historical_source: git
+
+evidence:
+  H1:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      Use python fastapi for backend and react with shadcn ui for frontend
+      and then sqlite for now for the database.
+  H2:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      For the AI, use AnthropicVertex Client, there are env vars for it
+      already at ~/.zshrc so you can see what you want.
+  H3:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      So in this project, i want to create a new webapp that will help me
+      with writing. Writing blogs/articles, letters, reports and docs.
+  H4:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      The way I want it to be is, there will be projects, and inside each
+      project there will dirs/files/sub-dirs. All of them will be Markdown
+      files. These are resources. Then i will read those files, and make
+      notes/highlight them. I will never edit them.
+  H5:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      And what i want is an AI system that will read these resources, come
+      up with interesting lenses for the doc like a financial expert, or a
+      real-estate expert or a political expert or a software engineering
+      expert, depending on the doc, and these ai experts will have their own
+      notes, which i can review and discard if i want to or add to my notes,
+      with additional changes if needed.
+  H6:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      Me and the AI will do this round of reading together on the set of
+      docs, and I will be the one creating a dump of notes with snippets and
+      highlights and my thoughts and ai's thoughts.
+  H7:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      And then there should be a button, that will use these notes, to
+      create a report for me.
+  H8:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      Once that report is created, the mode shifts to editor for me. I can
+      go in edit paragraph by manually typing. And here paragraph is a unit
+      block.
+  H9:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06754c37e001N0Ql8A1Vc0UB6r
+    quote: >
+      Per block i want 2 options: 1. Change of tone which will tell ai to
+      generate 5 samples based on different tone, based ont he context of
+      the report. 2. I want the AI to start critiquing my argument and
+      challenging me, so that i can better formulate my argument.
+
+human_approved:
+  intents:
+    - id: INT-001
+      scope: project
+      lifecycle: active
+      statement: >
+        Build a writing-assistance webapp for blogs/articles, letters,
+        reports and docs.
+      evidence: [H1, H2, H3]
+      decisions:
+        - id: DEC-001
+          statement: Use a Python FastAPI backend.
+          evidence: [H1]
+        - id: DEC-002
+          statement: Use React with shadcn/ui for the frontend.
+          evidence: [H1]
+        - id: DEC-003
+          statement: Use SQLite as the database for now.
+          evidence: [H1]
+        - id: DEC-004
+          statement: >
+            Use the AnthropicVertex client for all AI calls, with
+            credentials read from existing env vars in ~/.zshrc.
+          evidence: [H2]
+
+    - id: INT-002
+      scope: project
+      lifecycle: active
+      statement: >
+        Model writing work as projects containing read-only Markdown
+        resource trees that are read and annotated, never edited.
+      evidence: [H3, H4]
+      decisions:
+        - id: DEC-005
+          statement: >
+            A project contains dirs/files/sub-dirs of Markdown files acting
+            as resources.
+          evidence: [H4]
+        - id: DEC-006
+          statement: >
+            The human reads resources and makes notes/highlights; resources
+            themselves are never edited.
+          evidence: [H4]
+
+    - id: INT-003
+      scope: project
+      lifecycle: active
+      statement: >
+        Run a joint human-AI reading pass over a set of docs using
+        AI-generated expert lenses whose notes the human can adopt or
+        discard, then curate a notes dump.
+      evidence: [H3, H5, H6]
+      decisions:
+        - id: DEC-007
+          statement: >
+            The AI system reads the resources and proposes relevant expert
+            lenses per doc (e.g. financial, real-estate, political,
+            software-engineering expert).
+          evidence: [H5]
+        - id: DEC-008
+          statement: >
+            Each AI expert keeps its own notes; the human can review and
+            discard them or add them (possibly modified) to the human notes.
+          evidence: [H5]
+        - id: DEC-009
+          statement: >
+            The human curates the output of the reading round as a dump of
+            notes including snippets, highlights, and both human and AI
+            thoughts.
+          evidence: [H6]
+
+    - id: INT-004
+      scope: project
+      lifecycle: active
+      statement: >
+        Generate a report from the curated notes dump, then shift to a
+        block-level editor with per-block AI assistance.
+      evidence: [H3, H7, H8, H9]
+      decisions:
+        - id: DEC-010
+          statement: >
+            A button generates the report from the curated notes dump.
+          evidence: [H7]
+        - id: DEC-011
+          statement: >
+            After report creation the app shifts to editor mode where the
+            report is edited manually, paragraph by paragraph, with the
+            paragraph as the unit block.
+          evidence: [H8]
+        - id: DEC-012
+          statement: >
+            Per block the user can request a tone change that makes the AI
+            generate 5 samples in different tones using the report context.
+          evidence: [H9]
+        - id: DEC-013
+          statement: >
+            Per block the user can have the AI critique and challenge the
+            argument to help formulate it better.
+          evidence: [H9]
+
+agent_context:
+  research:
+    - id: RES-001
+      intent_ids: [INT-001]
+      statement: >
+        ~/.zshrc exports the Anthropic Vertex environment
+        (ANTHROPIC_VERTEX_PROJECT_ID, ANTHROPIC_MODEL,
+        ANTHROPIC_SMALL_FAST_MODEL, GOOGLE_VERTEX_LOCATION, VERTEX_ACCESS_TOKEN
+        helpers, ANTHROPIC_BASE_URL, ANTHROPIC_CUSTOM_MODEL_OPTION*) needed
+        for an AnthropicVertex client.
+      basis: environment_configuration_inspection
+      source_ref: msg_06754d782001f33sBRQfAuGb6O
+
+  assumptions:
+    - id: ASM-001
+      intent_ids: [INT-001]
+      statement: >
+        The reading UI is a multi-stage flow: browse project resources,
+        read/annotate them, run AI experts, review expert notes.
+      status: agent_derived
+      consequence: >
+        Concretely rendered as screens/routes that differ from the user's
+        mental model of the flow will need adjustment after first use.
+    - id: ASM-002
+      intent_ids: [INT-003]
+      statement: >
+        AI experts are parallel structured LLM calls, each with a system
+        prompt for one lens, producing notes stored per project, resource,
+        and expert.
+      status: unverified
+      consequence: >
+        If expert roles should be user-selected or user-defined instead of
+        AI-suggested, the expert generation path must be reworked.
+    - id: ASM-003
+      intent_ids: [INT-003]
+      statement: >
+        Expert notes review is a list UI with accept/reject/edit actions
+        that merge accepted notes into the human's note dump.
+      status: unverified
+      consequence: >
+        Review mechanics are agent-designed; user may want different merge
+        or discard semantics.
+    - id: ASM-004
+      intent_ids: [INT-004]
+      statement: >
+        The report is stored at paragraph granularity (block table) so tone
+        remix and critique act on individual blocks, and blocks keep links
+        back to the source notes/resources that produced them.
+      status: unverified
+      consequence: >
+        If the user expects free-form whole-document generation instead,
+        the block model may be over-engineered.
+    - id: ASM-005
+      intent_ids: [INT-001]
+      statement: >
+        Verification of the AnthropicVertex env vars came from ~/.zshrc;
+        the vars still need to be exported and valid in the runtime
+        environment where the backend runs.
+      status: unverified
+      consequence: >
+        Backend AI calls may fail at first run if the env vars are not
+        loaded into the process.
+    - id: ASM-006
+      intent_ids: [INT-001]
+      statement: >
+        The empty backend/ and frontend/ directories at the project root are
+        the intended scaffolding location for this build.
+      status: agent_derived
+      consequence: >
+        Code landing elsewhere would need to be relocated.
+
+  observations:
+    - id: OBS-001
+      intent_ids: [INT-001]
+      statement: >
+        The project repo is essentially empty (single commit "starting from
+        scratch", empty backend/ and frontend/ dirs, only an untracked
+        logs/).
+      source_ref: msg_06754d782001f33sBRQfAuGb6O
+
+  unapproved_actions: []
+
+open_questions: []
