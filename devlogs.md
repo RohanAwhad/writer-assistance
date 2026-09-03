@@ -64,3 +64,18 @@
   prefetch (25 vitest tests). Reviewer: PASS-WITH-WARN → WARNs fixed, full suite green.
 - Loop state: build-reviewer satisfied for both milestones. Remaining: integration milestone
   (manual §11.2 checklist w/ real AnthropicVertex — needs Rohan + live env vars).
+
+## 2026-09-03 — Integration milestone: PASS (real Vertex AI)
+
+- Servers: backend :8000 + frontend :5173 (vite proxy), fresh DB, sample docs in /tmp/opencode/wd-sample-docs.
+- Live AI gate: 5/5 env-gated tests pass (RUN_LIVE_AI=1).
+- Full §11.2 journey over live API w/ real AI: import/read-only, annotate+FB-1 reload,
+  lenses (5 proposals), experts (10 notes) + FB-2 reload, review (discard/merge/accept),
+  curated dump (4 kinds), generate (2 rounds; one-shot 409), block edit, tone (exactly 5),
+  critique, export.md, delete (confirm semantics), new round — all PASS.
+- UI: root HTML + proxy JSON OK; source docs byte-identical after run; backend log clean (0 tracebacks).
+- Evidence: logs/integration-2026-09-03.md.
+- Fixes found: `anthropic[google]` extra invalid in sdk 1.3 → `anthropic[vertex]` (649d450).
+- Open for Rohan: ANTHROPIC_MODEL env = `claude-opus-4-8[1m]` (Claude Code alias form) is
+  rejected by Vertex; integration ran with `claude-sonnet-5`. Canonical env value decision pending.
+- Residual: manual UI click-through (visual/UX) not yet done by human.
