@@ -88,3 +88,25 @@
 - Verified: shell ANTHROPIC_MODEL still `claude-opus-4-8[1m]` (broken alias) → after app
   import resolves to claude-sonnet-5; offline suite 68 pass; live AI gate 5/5 (37s).
 - .hai: RES-001/ASM-005 updated (agent context; ASM-005 status resolved).
+
+## 2026-09-03 — UI spin (manual click-through) + real fixes
+
+- User cleaned .hai: removed process intents INT-005..008 (spec/build/integration/checkpoint);
+  only INT-001..004 remain; evidence pruned (H10-H20 mostly), process facts repointed to INT-001.
+  Commit 0c76195 pushed to origin/built-using-hai.
+- **Bug (found via browser walkthrough, fixed)**: GET /api/v1/projects/{id}/tree and
+  /api/v1/rounds returned 500 under uvicorn — sqlite3.ProgrammingError "objects created in a
+  thread can only be used in that same thread" (FastAPI threadpool: dep generator vs endpoint).
+  Fix: `check_same_thread=False` in db.connect() (local single-user, per DEC-014). 68 tests pass.
+  Why integration passed: it ran via API/test client in-process (same thread) — browser threads
+  expose it.
+- Walkthrough (playwright, real Vertex AI, claude-sonnet-5 from backend/.env):
+  create project -> import 4-file tree + subdir (works), render + read-only badge (ok),
+  annotate: text-select highlight + note persist + reload (ok; API verified),
+  round create (ok), propose lenses -> 5 proposals (ok), select 2 -> expert runs -> notes
+  (ok, real AI), review: add/edit&add/discard (ok; merged notes auto-entry the dump, marked saved),
+  curate: free human-thought entry + append + save, generate report (pending B2c run),
+  block edit, tone 5 samples, critique, export, delete + new round (pending B3 run).
+- Observations: round-doc checkboxes default all-checked; label click toggled unexpected rows
+  (test-script quirk, not app bug). Console 404 = favicon only. Rounds list shows "· dump"
+  once the round's dump exists.
