@@ -6,7 +6,7 @@ project:
 
 snapshot:
   source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
-  captured_through: msg_0694cb2f5001jb2Usyosl1Gkqu
+  captured_through: msg_06984cf9c001CNOYJMY0LgMYKU
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -237,6 +237,13 @@ evidence:
     proposal_ref: A7
     selections:
       provider_selection: "In-app selector"
+  H34:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06984cf9c001CNOYJMY0LgMYKU
+    quote: >
+      use writer.assistance.rohanawhad.com as the domain for hosting.
+      update the hai state intent decision
 
 human_approved:
   intents:
@@ -394,10 +401,11 @@ human_approved:
           evidence: [H25]
         - id: DEC-020
           statement: >
-            The app is exposed publicly via a Cloudflare tunnel to a public
-            hostname of rohanawhad.com; the exact subdomain is chosen by
-            the human (OQ-07).
-          evidence: [H24]
+            The app is exposed publicly via a Cloudflare tunnel to the
+            public hostname writer.assistance.rohanawhad.com; the hostname
+            is reserved for the app container (the mission-control viewer
+            is not served on it).
+          evidence: [H24, H34]
         - id: DEC-021
           statement: >
             The container enforces a minimal password/API-key gate; a key
@@ -664,5 +672,4 @@ agent_context:
   unapproved_actions: []
 
 open_questions:
-  - "OQ-07 [INT-006]: Which public hostname (subdomain of rohanawhad.com) should the Cloudflare tunnel route to the container?"
   - "OQ-08 [INT-007]: What granularity should the in-app provider selector use — per project or per round?"
