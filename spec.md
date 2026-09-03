@@ -1,7 +1,7 @@
 # Build Spec — writer-assistance webapp
 
 - Source of truth: `.hai/state.yaml` (capture commit 4031ecc) — evidence H1..H9, human-approved intents INT-001..004, decisions DEC-001..013.
-- Status: draft v1.3 (human resolutions: OQ-01 import-snapshot, local single-user — 2026-09-03). Date 2026-09-03. Version 1.3.
+- Status: draft v1.5 (human resolutions: OQ-01 import-snapshot, local single-user — 2026-09-03). Date 2026-09-03. Version 1.5; §6 additions FB-1/FB-2 (build loop, v1.5).
 - Trace legend: every normative requirement is tagged `Trace: DEC-xx[, DEC-yy]`. Items marked `SD-nn` are agent-derived refinements (soft, reviewable, never override a DEC). Items marked `Depends on soft ASM-nn` rest on malleable agent assumptions and are not hard requirements.
 
 ## 1. Purpose & scope
@@ -111,9 +111,11 @@ All under `/api/v1`, JSON, **local single-user, no auth** (human-resolved 2026-0
 - `POST /projects/{id}/scan` — import resource tree snapshot (F1, SD-1)
 - `GET /projects/{id}/tree`, `GET /resources/{id}` (content) (F1, F2)
 - `POST /resources/{id}/highlights` | `POST /resources/{id}/notes` | `PUT/DELETE /annotations/{id}` (F2)
+- `GET /resources/{id}/annotations` — returns all annotations (highlights + notes) for a resource as `list[AnnotationOut]` (F2) `[added v1.5 — build-loop FB-1/FB-2]`
 - `POST /resources/{id}/lens-proposals` — AI proposes lenses (F3)
 - `POST /rounds` — create round with doc set; `GET /rounds/{id}` (F6)
 - `POST /rounds/{id}/experts` (run confirmed lenses), `GET /expert-runs/{id}/notes`, `PATCH /expert-notes/{id}` (review state), `POST /expert-notes/{id}/merge` (F4, F5)
+- `GET /rounds/{id}/expert-runs` — returns the round's expert runs (with lens/doc info), each with its notes, for re-review after reload (F4, F5) `[added v1.5 — build-loop FB-1/FB-2]`
 - `POST /rounds/{id}/dump` (save curated ordered entries), `GET /rounds/{id}/dump` (F6)
 - `POST /rounds/{id}/generate-report` — returns report + blocks; flips the round's stage (F7, F8)
 - `GET /reports/{id}` (blocks), `PUT /blocks/{id}` (manual edit) (F9)
@@ -159,9 +161,9 @@ Door classes: **one-way** = irreversible/high-cost mistake, needed human input (
 | UC | Title | Primary actor | Kind | Main success path (brief) | Trace |
 |---|---|---|---|---|---|
 | UC-01 | Set up project by importing a Markdown tree | Human | Main | Human creates a project and imports a local Markdown tree; backend snapshots the tree into app storage (OQ-01); files appear as read-only resources listed by path, renderable, with no edit affordance (R-011). | F1 (R-010, R-011) · DEC-005, DEC-006 |
-| UC-02 | Read & annotate a resource | Human | Main | Human opens a resource in the rendered view (SD-2), selects text to highlight, attaches a note (optionally anchored to a highlight/range); annotations persist in app storage; resource content is never written back (R-012). | F2 (R-011, R-012) · DEC-006 |
+| UC-02 | Read & annotate a resource | Human | Main | Human opens a resource in the rendered view (SD-2), selects text to highlight, attaches a note (optionally anchored to a highlight/range); annotations persist in app storage and survive page reload; resource content is never written back (R-012). | F2 (R-011, R-012) · DEC-006 |
 | UC-03 | Propose & confirm expert lenses | Human (AI proposes) | Main | Human asks the AI for lenses on a doc; AI proposes relevant lenses for that doc (e.g. financial, real-estate, political, software-engineering, as content suggests); human confirms the subset to run (SD-3). | F3 (R-020) · DEC-007 |
-| UC-04 | Run experts; review, discard, or adopt their notes | Human (AI produces notes) | Main | AI runs one expert per confirmed doc×lens; each expert keeps its own notes. Human reviews each note and chooses keep / discard / edit-and-add; adopted notes (including edited ones) merge into human notes with provenance kept (AI vs human origin). | F4, F5 (R-021, R-022) · DEC-007, DEC-008 |
+| UC-04 | Run experts; review, discard, or adopt their notes | Human (AI produces notes) | Main | AI runs one expert per confirmed doc×lens; each expert keeps its own notes, and the round's expert runs and their notes survive page reload so review can resume. Human reviews each note and chooses keep / discard / edit-and-add; adopted notes (including edited ones) merge into human notes with provenance kept (AI vs human origin). | F4, F5 (R-021, R-022) · DEC-007, DEC-008 |
 | UC-05 | Curate a round dump | Human | Main | Human picks the round's doc set, then curates the dump as ordered entries of kinds snippet, highlight, human-thought, ai-thought from per-doc pools plus free typing (SD-5); dump persists per round. | F6 (R-030, R-031) · DEC-009 |
 | UC-06 | Generate a report from the dump | Human (AI generates) | Main | Human presses "Generate report"; backend makes a single AI call whose input is the curated dump content; the result is stored as ordered paragraphs/blocks. | F7 (R-040, R-041) · DEC-010 |
 | UC-07 | Mode shift into editor | System | Main | After report creation the round shifts to the editor stage: that round's reading actions (annotate, run experts, curate) are closed or disabled and the report becomes the editing surface; the gate is per round — other rounds and their reading actions are unaffected. | F8 (R-042) · DEC-010, DEC-011 |
@@ -199,7 +201,7 @@ Stack requirements R-001 (FastAPI), R-002 (React + shadcn/ui), R-003 (SQLite), a
 - Read-only invariant (R-011, R-012): drive a full reading → annotate → (mocked) generate → edit path at service level; assert the imported resource snapshot is byte-identical throughout and no code path writes resource content.
 - Schema/CRUD round-trips: project, resources, rounds, dump entries, blocks; per-round stage transition `reading`→`editing`; after the shift, that round's reading-stage operations are rejected, while a new round in the same project starts in `reading` with them open again (R-042 gate).
 
-**Backend API tests** (TestClient, AI mocked) — §6 endpoint coverage per flow: import scan + tree (F1), annotations CRUD (F2), lens proposals + expert runs + merge-with-provenance (F3..F5), dump save/get (F6), generate-report returns blocks and flips the round's stage (F7/F8), block PUT persists manual edits (F9), tone-samples returns exactly 5 (F10), critique returns text without editing the block (F11), delete-report requires an explicit confirm payload (OQ-05).
+**Backend API tests** (TestClient, AI mocked) — §6 endpoint coverage per flow: import scan + tree (F1), annotations CRUD (F2), lens proposals + expert runs + merge-with-provenance (F3..F5), dump save/get (F6), generate-report returns blocks and flips the round's stage (F7/F8), block PUT persists manual edits (F9), tone-samples returns exactly 5 (F10), critique returns text without editing the block (F11), delete-report requires an explicit confirm payload (OQ-05). Annotations re-fetch test: `GET /resources/{id}/annotations` returns the resource's highlights + notes, re-rendering them after page reload (UC-02, R-012). Expert-runs re-fetch test: `GET /rounds/{id}/expert-runs` returns the round's expert runs with their notes, restoring the review list after page reload (UC-04, R-021, R-022).
 
 **Frontend component tests** (vitest + RTL; network mocked at the api-client boundary):
 - api client maps frontend calls to the §6 endpoints.
