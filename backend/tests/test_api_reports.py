@@ -1,11 +1,19 @@
-"""API tests: report lifecycle, blocks, tone samples, critique, export (F7..F11)."""
+"""API tests: report lifecycle, blocks, tone samples, critique, export (F7..F11);
+view-mode read path (R-060, R-061, F12)."""
 
 from pathlib import Path
 from typing import Any, cast
 
 from fastapi.testclient import TestClient
 
-from tests.conftest import PARAGRAPHS, FakeAI, full_round_to_report, imported_project
+from tests.conftest import (
+    PARAGRAPHS,
+    FakeAI,
+    Harness,
+    direct_db,
+    full_round_to_report,
+    imported_project,
+)
 
 
 def _fake(client: TestClient) -> FakeAI:
@@ -171,3 +179,94 @@ def test_delete_report_requires_confirm(client: TestClient, sample_tree: Path) -
         client.request("DELETE", "/api/v1/reports/999999", json={"confirm": True}).status_code
         == 404
     )
+
+
+def _round_report_state(
+    harness: Harness, report_id: int, round_id: int
+) -> tuple[
+    tuple[object, ...],
+    tuple[tuple[object, ...], ...],
+    tuple[object, ...],
+]:
+    """Canonical (report row, block rows, round row) snapshot from the DB."""
+    conn = direct_db(harness.db_path)
+    report = conn.execute(
+        "SELECT id, round_id, created_at FROM reports WHERE id = ?",
+        (report_id,),
+    ).fetchone()
+    blocks = conn.execute(
+        """SELECT id, report_id, position, content, created_at, updated_at
+           FROM report_blocks WHERE report_id = ? ORDER BY position""",
+        (report_id,),
+    ).fetchall()
+    round_row = conn.execute(
+        "SELECT stage, updated_at FROM reading_rounds WHERE id = ?",
+        (round_id,),
+    ).fetchone()
+    conn.close()
+    assert report is not None and round_row is not None
+    return tuple(report), tuple(tuple(block) for block in blocks), tuple(round_row)
+
+
+def test_view_mode_read_path_returns_saved_blocks_and_mutates_nothing(
+    harness: Harness, client: TestClient, sample_tree: Path
+) -> None:
+    ids = _generated_report(client, sample_tree)
+    report_id, round_id = ids["report_id"], ids["round_id"]
+    before = _round_report_state(harness, report_id, round_id)
+    saved_block_ids = [row[0] for row in before[1]]
+    assert len(saved_block_ids) == 3
+
+    fetched = client.get(f"/api/v1/reports/{report_id}")
+    assert fetched.status_code == 200
+    report = fetched.json()
+    assert report["id"] == report_id
+    assert report["round_id"] == round_id
+    assert [block["id"] for block in report["blocks"]] == saved_block_ids
+    assert [block["content"] for block in report["blocks"]] == PARAGRAPHS
+    assert [block["position"] for block in report["blocks"]] == [0, 1, 2]
+
+    exported = client.get(f"/api/v1/reports/{report_id}/export.md")
+    assert exported.status_code == 200
+    assert exported.headers["content-type"].startswith("text/markdown")
+    assert exported.text == "\n\n".join(PARAGRAPHS) + "\n"
+
+    detail = client.get(f"/api/v1/rounds/{round_id}")
+    assert detail.status_code == 200
+    assert detail.json()["stage"] == "editing"
+    assert detail.json()["report_id"] == report_id
+
+    assert _round_report_state(harness, report_id, round_id) == before
+
+
+def test_view_mode_read_path_returns_edited_rows_and_mutates_nothing(
+    harness: Harness, client: TestClient, sample_tree: Path
+) -> None:
+    ids = _generated_report(client, sample_tree)
+    report_id, round_id = ids["report_id"], ids["round_id"]
+    edited_content = "My rewritten opening paragraph."
+    edited = client.put(
+        f"/api/v1/blocks/{_report_blocks(client, report_id)[0]['id']}",
+        json={"content": edited_content},
+    )
+    assert edited.status_code == 200
+    expected_contents = [edited_content, PARAGRAPHS[1], PARAGRAPHS[2]]
+    saved = _round_report_state(harness, report_id, round_id)
+
+    fetched = client.get(f"/api/v1/reports/{report_id}")
+    assert fetched.status_code == 200
+    blocks = fetched.json()["blocks"]
+    assert [block["content"] for block in blocks] == expected_contents
+    assert blocks[0]["updated_at"] == edited.json()["updated_at"]
+
+    exported = client.get(f"/api/v1/reports/{report_id}/export.md")
+    assert exported.status_code == 200
+    assert exported.headers["content-type"].startswith("text/markdown")
+    assert exported.text == "\n\n".join(expected_contents) + "\n"
+
+    detail = client.get(f"/api/v1/rounds/{round_id}")
+    assert detail.status_code == 200
+    assert detail.json()["stage"] == "editing"
+    assert detail.json()["report_id"] == report_id
+
+    assert _round_report_state(harness, report_id, round_id) == saved

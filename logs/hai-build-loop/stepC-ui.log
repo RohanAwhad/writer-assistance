@@ -1,0 +1,38 @@
+S13 round1 badge: editing
+S13 round1 deleted-msg visible: 1
+S13 round3 badge: reading
+S13 round3 curate enabled: true
+S13 round3 expert controls open (round-closed absent): true
+S13 round3 lens-expert panel present: 0
+S14 round2 stage badge: editing
+S14 server round stage (initial): editing
+S14 entered report surface -> lands on EDITOR (heading present: 1, textareas: 5)
+S14 editor has Delete report button: 1
+S14 editor has Download .md: 1
+S14 editor per-block AI buttons (tone/critique): 5/5
+S14 [toggle editor->view] writes during toggle: []
+S14 view heading 'Report' present, 'Report editor' absent: 0 heading-check
+S14 view renders 5 read-only paragraphs in order; first block text matches saved: true
+S14 second paragraph text: A closer look at this imbalance points toward structural rather than cyclical causes. If n…
+S14 view textareas: 0
+S14 view per-block AI buttons tone: 0 critique: 0
+S14 view save-state testids: 0
+S14 view Delete report present: 0
+S14 view Download .md present: 1
+S14 server round stage after editor->view: editing
+S14 [toggle view->editor] writes during toggle: []
+S14 back in editor, textareas: 5
+S14 block1 content preserved: true
+S14 typed edit saved (PUT seen): ["R2 PUT /api/v1/blocks/5"]
+S14 [toggle editor->view after save] writes during toggle: []
+S14 view shows updated text with edit: true
+S14 server round stage after second view: editing
+UC16 after reload round badge: editing
+UC16 report surface returns in EDITOR mode after reload (editor heading): 1
+UC16 content preserved after reload: true
+UC16 server stage before re-entry / after re-entry: editing / editing
+UC16 final clean toggle writes: []
+UC16 final server stage: editing
+S14 full write list for round-2 session: [
+ "R2 PUT /api/v1/blocks/5"
+]

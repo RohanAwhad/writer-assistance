@@ -1,0 +1,27 @@
+STEP1 tree rows per name: {"housing-market.md":2,"letter.md":1,"remote-work.md":1,"supply-side.md":1}
+STEP1 header resource count: 5 resources
+STEP1 doc heading: Remote Work and Productivity
+STEP1 shown path: research/remote-work.md
+STEP1 editable controls in main pane: {"textareas":0,"contenteditable":0,"inputs":0}
+STEP1 'read-only' badge count on screen: 1
+STEP2 selection box visible for: Remote work raised output per hour
+STEP2 highlight mark rendered in doc
+STEP2 anchored note saved
+STEP2 annotations listed: [
+ {
+  "badge": "anchored",
+  "anchored": true,
+  "text": "Remote work raised output per hour for knowledge workers in "
+ }
+]
+STEP2 after reload marks: ["Remote work raised output per hour for knowledge workers in the first year, but collaboration metrics dipped."]
+STEP2 after reload annotation list: [
+ {
+  "badge": "anchored",
+  "text": "Remote work raised output per hour for knowledge workers in "
+ },
+ {
+  "badge": "anchored",
+  "text": "Reviewer anchored note: async docs correlate with fewer meet"
+ }
+]

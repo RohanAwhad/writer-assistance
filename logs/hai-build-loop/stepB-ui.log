@@ -1,0 +1,27 @@
+STEP6 round stage badge: editing
+STEP6 curate disabled: true
+STEP6 curate tooltip: this round is in the editing stage; curation is closed (R-042)
+STEP6 regression: highlight marks visible while round editing: 1
+STEP6 reading pane text: editingRound 1 — housing + remote workThis round is in the editing stage: its expert runs and curation are closed (R-042). Annotating docs stays available project-wide. Start a new round to run the re
+STEP6 annotate side panel present: 1
+STEP6 annotation items listed: 2
+STEP7 editor textareas (blocks): 4
+STEP7 edited block0 ends: ...ng across the country. (REVIEWER-EDIT-A)
+STEP7 edited block2 ends: ...single year's results. (REVIEWER-EDIT-B)
+STEP7 after reload block1 has edit A: true
+STEP7 after reload block3 has edit B: true
+STEP8 sample labels: []
+STEP8 block unchanged while samples shown: true
+STEP9 applied sample is index2 text: true
+STEP9 samples panel closed after apply: true
+STEP10 critique length: 1482 block unchanged: true
+STEP10 critique excerpt: This paragraph is jarringly disconnected from the rest of the report, which is entirely about remote work and productivity; if housing data is meant to serve as an analogy or parallel case, that conne
+STEP10 manual rewrite saved.
+STEP11 downloaded file bytes: 1972
+STEP11 md contains edit A: false
+STEP11 md contains applied sample text: true
+STEP11 md contains critique rewrite: true
+STEP12 after cancel blocks still present: 1
+STEP12 after confirm: deleted message shown: 1
+STEP12 report button disabled: true
+STEP12 round badge still: editing

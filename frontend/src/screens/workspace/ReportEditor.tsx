@@ -1,7 +1,8 @@
-import { Download, Feather, Loader2, MessageSquareWarning, Trash2, Wand2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Download, Eye, Feather, Loader2, MessageSquareWarning, Pencil, Trash2, Wand2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../api/client";
 import type { ReportBlockOut, ReportOut, ToneSampleOut } from "../../api/types";
+import MarkdownView from "../../components/MarkdownView";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/fields";
@@ -12,6 +13,15 @@ interface ReportEditorProps {
   reportId: number;
   roundName: string;
   onReportDeleted: () => void;
+}
+
+type ReportSurface = "editor" | "view";
+
+type SaveRoundResult = "clean" | "retry" | "failed";
+
+interface BlockCardHandle {
+  flush: () => Promise<boolean>;
+  applySample: (text: string) => Promise<boolean>;
 }
 
 interface AssistState {
@@ -31,12 +41,21 @@ const emptyAssist = (): AssistState => ({
 export default function ReportEditor({ reportId, roundName, onReportDeleted }: ReportEditorProps) {
   const [report, setReport] = useState<ReportOut | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [surface, setSurface] = useState<ReportSurface>("editor");
   const [assists, setAssists] = useState<Record<number, AssistState>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const blockHandlesRef = useRef(new Map<number, BlockCardHandle>());
+
+  const registerCardHandle = useCallback((blockId: number, handle: BlockCardHandle): (() => void) => {
+    blockHandlesRef.current.set(blockId, handle);
+    return () => {
+      blockHandlesRef.current.delete(blockId);
+    };
+  }, []);
 
   useEffect(() => {
     setLoadError(null);
@@ -80,18 +99,12 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
   const applyTone = async (block: ReportBlockOut, sample: ToneSampleOut): Promise<void> => {
     const current = assistFor(block.id).tone;
     patchAssist(block.id, { tone: { busy: true, samples: current.samples, error: null } });
-    try {
-      const updated = await api.updateBlock(block.id, sample.text);
-      setBlockContent(updated.id, updated.content);
+    const handle = blockHandlesRef.current.get(block.id);
+    const applied = handle === undefined ? false : await handle.applySample(sample.text);
+    if (applied) {
       patchAssist(block.id, { tone: { busy: false, samples: null, error: null } });
-    } catch (err) {
-      patchAssist(block.id, {
-        tone: {
-          busy: false,
-          samples: current.samples,
-          error: err instanceof ApiError ? err.detail : (err as Error).message,
-        },
-      });
+    } else {
+      patchAssist(block.id, { tone: { busy: false, samples: current.samples, error: null } });
     }
   };
 
@@ -146,6 +159,14 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
     }
   };
 
+  const switchToView = async (): Promise<void> => {
+    if (surface === "view") return;
+    const results = await Promise.all(
+      [...blockHandlesRef.current.values()].map((handle) => handle.flush()),
+    );
+    if (results.every((saved) => saved)) setSurface("view");
+  };
+
   if (loadError !== null) {
     return <div className="p-5"><InlineError message={loadError} /></div>;
   }
@@ -157,7 +178,7 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-5 py-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Report editor</h2>
+          <h2 className="text-lg font-semibold">{surface === "view" ? "Report" : "Report editor"}</h2>
           <Badge variant="outline">{roundName}</Badge>
           <span className="text-xs text-muted-foreground">
             editing stage — this round&apos;s reading actions are closed
@@ -165,41 +186,76 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
         </div>
         <div className="flex items-center gap-2">
           {exportError !== null && <InlineError message={exportError} />}
+          <Button
+            size="sm"
+            variant={surface === "view" ? "default" : "ghost"}
+            onClick={() => void switchToView()}
+          >
+            <Eye className="mr-1 h-3 w-3" />
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant={surface === "editor" ? "default" : "ghost"}
+            onClick={() => setSurface("editor")}
+          >
+            <Pencil className="mr-1 h-3 w-3" />
+            Edit
+          </Button>
           <Button size="sm" variant="outline" disabled={exporting} onClick={() => void handleExport()}>
             <Download className="mr-1 h-3 w-3" />
             {exporting ? "Exporting…" : "Download .md"}
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="mr-1 h-3 w-3" />
-            Delete report
-          </Button>
+          {surface === "editor" && (
+            <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete report
+            </Button>
+          )}
         </div>
       </div>
-      <div className="flex-1 space-y-4 overflow-y-auto p-5">
-        {report.blocks.length === 0 ? (
-          <EmptyHint>The report has no paragraphs.</EmptyHint>
-        ) : (
-          report.blocks.map((block) => (
-            <BlockEditorCard
-              key={block.id}
-              block={block}
-              assist={assistFor(block.id)}
-              onBlockContentSaved={setBlockContent}
-              onTone={() => void requestTone(block)}
-              onApplyTone={(sample) => void applyTone(block, sample)}
-              onCloseTone={() =>
-                patchAssist(block.id, { tone: { busy: false, samples: null, error: null } })
-              }
-              onCritique={() => void requestCritique(block)}
-              onCloseCritique={() =>
-                patchAssist(block.id, {
-                  critique: { busy: false, text: null, error: null },
-                })
-              }
-            />
-          ))
-        )}
-      </div>
+      {surface === "view" ? (
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl space-y-6 px-8 py-6">
+            {report.blocks.length === 0 ? (
+              <EmptyHint>The report has no paragraphs.</EmptyHint>
+            ) : (
+              report.blocks.map((block) => (
+                <div key={block.id} data-testid={`view-block-${block.id}`}>
+                  <MarkdownView docText={block.content} markRanges={[]} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+          {report.blocks.length === 0 ? (
+            <EmptyHint>The report has no paragraphs.</EmptyHint>
+          ) : (
+            report.blocks.map((block) => (
+              <BlockEditorCard
+                key={block.id}
+                block={block}
+                assist={assistFor(block.id)}
+                onBlockContentSaved={setBlockContent}
+                onRegisterHandle={registerCardHandle}
+                onTone={() => void requestTone(block)}
+                onApplyTone={(sample) => void applyTone(block, sample)}
+                onCloseTone={() =>
+                  patchAssist(block.id, { tone: { busy: false, samples: null, error: null } })
+                }
+                onCritique={() => void requestCritique(block)}
+                onCloseCritique={() =>
+                  patchAssist(block.id, {
+                    critique: { busy: false, text: null, error: null },
+                  })
+                }
+              />
+            ))
+          )}
+        </div>
+      )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
@@ -229,6 +285,7 @@ interface BlockCardProps {
   block: ReportBlockOut;
   assist: AssistState;
   onBlockContentSaved: (blockId: number, content: string) => void;
+  onRegisterHandle?: (blockId: number, handle: BlockCardHandle) => () => void;
   onTone: () => void;
   onApplyTone: (sample: ToneSampleOut) => void;
   onCloseTone: () => void;
@@ -240,6 +297,7 @@ function BlockEditorCard({
   block,
   assist,
   onBlockContentSaved,
+  onRegisterHandle,
   onTone,
   onApplyTone,
   onCloseTone,
@@ -250,35 +308,92 @@ function BlockEditorCard({
   const [saveState, setSaveState] = useState<"clean" | "dirty" | "saving" | "failed">("clean");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const textRef = useRef(text);
   const lastSyncedContent = useRef(block.content);
+  const savePromiseRef = useRef<Promise<SaveRoundResult> | null>(null);
+  const flushRef = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
+  const applyRef = useRef<(sampleText: string) => Promise<boolean>>(() => Promise.resolve(false));
+  const stableHandleRef = useRef<BlockCardHandle | null>(null);
+  if (stableHandleRef.current === null) {
+    stableHandleRef.current = {
+      flush: () => flushRef.current(),
+      applySample: (sampleText) => applyRef.current(sampleText),
+    };
+  }
+
+  const updateText = useCallback((value: string): void => {
+    textRef.current = value;
+    setText(value);
+  }, []);
 
   useEffect(() => {
     if (lastSyncedContent.current === block.content) return;
     lastSyncedContent.current = block.content;
-    if (saveState !== "dirty" && saveState !== "failed") setText(block.content);
-  }, [block.content, saveState]);
+    if (saveState !== "dirty" && saveState !== "failed") updateText(block.content);
+  }, [block.content, saveState, updateText]);
 
-  const save = async (): Promise<void> => {
-    if (text === block.content) {
+  const saveRound = (): Promise<SaveRoundResult> => {
+    const inFlight = savePromiseRef.current;
+    if (inFlight !== null) return inFlight;
+    const target = textRef.current;
+    if (target === lastSyncedContent.current) {
       setSaveState("clean");
-      return;
+      return Promise.resolve("clean");
     }
-    if (text.trim().length === 0) {
+    if (target.trim().length === 0) {
       setSaveError("a block cannot be empty");
       setSaveState("failed");
-      return;
+      return Promise.resolve("failed");
     }
     setSaveState("saving");
     setSaveError(null);
-    try {
-      const updated = await api.updateBlock(block.id, text);
-      onBlockContentSaved(updated.id, updated.content);
-      setSaveState("clean");
-    } catch (err) {
-      setSaveState("failed");
-      setSaveError(err instanceof ApiError ? err.detail : (err as Error).message);
-    }
+    const attempt: Promise<SaveRoundResult> = api
+      .updateBlock(block.id, target)
+      .then((updated): SaveRoundResult => {
+        onBlockContentSaved(updated.id, updated.content);
+        if (textRef.current !== target) {
+          setSaveState("dirty");
+          return "retry";
+        }
+        setSaveState("clean");
+        return "clean";
+      })
+      .catch((err): SaveRoundResult => {
+        setSaveState("failed");
+        setSaveError(err instanceof ApiError ? err.detail : (err as Error).message);
+        return "failed";
+      })
+      .finally(() => {
+        savePromiseRef.current = null;
+      });
+    savePromiseRef.current = attempt;
+    return attempt;
   };
+
+  const saveAll = async (): Promise<boolean> => {
+    for (let round = 0; round < 3; round += 1) {
+      const result = await saveRound();
+      if (result === "clean") return true;
+      if (result === "failed") return false;
+    }
+    return false;
+  };
+
+  const applySample = async (sampleText: string): Promise<boolean> => {
+    updateText(sampleText);
+    return saveAll();
+  };
+
+  useEffect(() => {
+    flushRef.current = saveAll;
+    applyRef.current = applySample;
+  });
+
+  useEffect(() => {
+    const handle = stableHandleRef.current;
+    if (handle === null) return;
+    return onRegisterHandle?.(block.id, handle);
+  }, [block.id, onRegisterHandle]);
 
   const statusLabel =
     saveState === "clean"
@@ -311,11 +426,11 @@ function BlockEditorCard({
         <Textarea
           value={text}
           onChange={(e) => {
-            setText(e.target.value);
+            updateText(e.target.value);
             if (saveState === "clean") setSaveState("dirty");
           }}
           onBlur={() => {
-            if (saveState === "dirty" || saveState === "failed") void save();
+            if (saveState === "dirty" || saveState === "failed") void saveAll();
           }}
           aria-label={`Block ${block.position + 1} content`}
           className="min-h-[90px] text-sm leading-relaxed"
@@ -332,7 +447,7 @@ function BlockEditorCard({
             {assist.critique.busy ? "Critiquing…" : "Critique"}
           </Button>
           {(saveState === "dirty" || saveState === "failed") && (
-            <Button size="sm" onClick={() => void save()}>
+            <Button size="sm" onClick={() => void saveAll()}>
               Save paragraph
             </Button>
           )}

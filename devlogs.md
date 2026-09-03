@@ -131,3 +131,60 @@
   - Reviewer r2 → **PASS** (3 cosmetic NITs disclosed: DEC-014/016 not id-tagged, UC-15 kind
     label, R-060 embeds SD-2 styling clause — not fixed).
 - Handoff returned; spec v1.6 committed; next: hai-build-loop for view-mode milestone.
+
+## 2026-09-03 — M-VM-BACKEND milestone: view-mode read-path test slice
+
+- Spec §11.1 view-mode read-path test (R-060/R-061) added as 2 additive API tests in
+  `backend/tests/test_api_reports.py` (FakeAI offline, TestClient): reads return saved rows
+  and mutate nothing.
+- Test 1 (`test_view_mode_read_path_returns_saved_blocks_and_mutates_nothing`): generate →
+  DB snapshot (reports row, report_blocks rows, reading_rounds stage/updated_at) → GET
+  /reports/{id} + GET /reports/{id}/export.md + GET /rounds/{id} → payload equals saved rows;
+  DB state byte-identical after the GETs.
+- Test 2 (`test_view_mode_read_path_returns_edited_rows_and_mutates_nothing`): same read-path
+  probe after a PUT /blocks/{id} manual edit — the view surface reads the rows the editor
+  writes (updated_at in the report GET; edited content in both GETs).
+- No production change (expected — view mode adds no backend behavior); no real defect found.
+- Gates run from backend/: pytest 70 passed, 5 skipped (env-gated live-AI, SD-16); mypy
+  clean (35 files); ruff clean. Prior suite was 68 — delta +2.
+
+## 2026-09-03 — M-VM-FRONTEND milestone: view-mode surface (R-060/R-061)
+
+- `ReportEditor.tsx` gains an ephemeral View/Edit sub-mode (SD-18: default editor on mount,
+  no persistence, no stage change): header View/Edit switch, view branch renders each block
+  read-only via the MarkdownView renderer (SD-2 style), export stays in both surfaces,
+  Delete gated to the editor (SD-19).
+- Write pipeline unified per block card: single-flight save + bounded convergence loop
+  (retype detection via textRef vs PUT target), apply-sample routed through the same
+  pipeline, flush-before-switch with all-or-nothing semantics (failed/empty flush keeps the
+  editor open with the error visible — no silent drop, no stale view render).
+- Tests: new `frontend/src/test/viewMode.test.tsx` (7 tests: read-only rendering incl.
+  binding absence of tone controls; toggle preservation + zero-write switching; mid-flight
+  keystroke re-save; apply-behind-dirty-save serialization; flush-failure retention + retry;
+  empty-block refusal).
+- Reviewer rounds: r1 PASS_WITH_WARN (M2F1 mid-flight stale flush, M2F2 apply-PUT bypass,
+  M2F3 untested failure paths) → r2 PASS (fixes + 5 tests; 2 NITs disclosed).
+- Gates run from frontend/: vitest 8 files / 32 tests passed; tsc clean; eslint clean;
+  vite build ok.
+
+## 2026-09-03 — M-VM-INTEGRATION milestone: live 14-step §11.2 journey (real Vertex)
+
+- Human authorized the full live run (real AnthropicVertex, claude-sonnet-5 from
+  backend/.env per DEC-015/DEC-017). Isolated DB via WRITER_ASSISTANCE_DB, fixture doc tree
+  under /tmp/opencode, servers logged to logs/hai-build-loop/, browser automation via the
+  repo's playwright install.
+- Steps 1-14 all PASS against the running app: import (5 files + subdir), annotate +
+  reload + on-disk byte-identity, AI lenses (5 proposals, 2 confirmed), AI experts
+  (19 notes; discard + edit-and-add with provenance), 4-kind curated dump, generate →
+  editing stage with run-expert/curate UI closed while annotating stays available (R-042
+  scope), typed block edits persist, tone exactly 5, apply-sample single PUT, critique
+  (block unchanged), export.md valid, delete confirm semantics, new round independent,
+  and **step 14 view mode**: read-only paragraphs, no textareas/save-states/AI buttons,
+  delete absent/download present, toggles wrote zero requests, reload lands on editor with
+  content preserved, badge stays `editing` (UC-15/UC-16).
+- Log review: backend.log sole 5xx = one transient 502 retried 201; no tracebacks; expected
+  404 after delete. Offline gates re-run green (backend 70 passed/5 skipped; frontend 32
+  passed). Reviewer verdict **PASS**, no findings; evidence:
+  logs/hai-build-loop/M-VM-INTEGRATION-integration.md.
+- All §11.3 milestones green → spec v1.6 fully built. Uncommitted until human authorizes.
+
