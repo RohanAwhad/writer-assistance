@@ -45,3 +45,22 @@
   added, stack-R sentence, NIT fixed. Reviewer round 3: PASS (2 wording NITs only).
 - NITs fixed inline → v1.4: R-042 wording "for that round", header status precision.
 - Commits: 48e734d (v1.2), aa6b389 (v1.3), pending (v1.4).
+
+## 2026-09-03 — Build loops: backend + frontend milestones
+
+- Build loop started (builder ↔ build-reviewer, both audit vs spec.md/.hai).
+- **Backend milestone** (f181417): FastAPI+SQLite per §4/§6; import-snapshot resources,
+  annotations, lens/expert flow, per-round stage, dump curation, one-shot report gen,
+  block editor API, tone-5/critique transient, export.md, confirm-delete. 63 tests offline,
+  mypy strict + ruff clean. Reviewer: **PASS-WITH-WARN** (R-042 annotate gating deferred to UI).
+- **Frontend milestone** (a9999e4): React+shadcn 3-panel workspace, UC-01..14, 17 vitest tests.
+  Reviewer: **FAIL** — 2 SPEC-CHANGE-REQUESTED (persisted annotations/expert runs not listable
+  → reload broke UC-02/UC-04 persistence).
+- **Spec loop resumed** (acd32f5, v1.5): §6 += GET /resources/{id}/annotations,
+  GET /rounds/{id}/expert-runs (FB-1/FB-2), UC reload clauses, §11.1 tests. Spec-reviewer PASS.
+- **Backend FB** (bbc25be): 2 GET endpoints + expert_runs.lens_proposal_id column + reload
+  tests (68 pass). Reviewer PASS (WARN: no migration tooling → make reset-db added).
+- **Frontend FB** (dcf62bc): hydration of annotations + expert runs, retry path, curate pool
+  prefetch (25 vitest tests). Reviewer: PASS-WITH-WARN → WARNs fixed, full suite green.
+- Loop state: build-reviewer satisfied for both milestones. Remaining: integration milestone
+  (manual §11.2 checklist w/ real AnthropicVertex — needs Rohan + live env vars).
