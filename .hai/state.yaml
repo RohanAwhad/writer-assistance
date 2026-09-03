@@ -6,7 +6,7 @@ project:
 
 snapshot:
   source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
-  captured_through: msg_068409144001XOOu5Jri7MT18u
+  captured_through: msg_068442646001f0O9a2Hsny82kW
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -116,6 +116,13 @@ evidence:
     type: direct_instruction
     source_ref: msg_068409144001XOOu5Jri7MT18u
     quote: approve this!
+  H22:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_068442646001f0O9a2Hsny82kW
+    quote: >
+      can you add another intent to the hai, that we want the view mode? like
+      just how we have editing mode.
 
 human_approved:
   intents:
@@ -241,6 +248,21 @@ human_approved:
             Per block the user can have the AI critique and challenge the
             argument to help formulate it better.
           evidence: [H9]
+
+    - id: INT-005
+      scope: project
+      lifecycle: active
+      statement: >
+        Provide a view mode for the generated report, alongside the existing
+        editing mode.
+      evidence: [H22]
+      decisions:
+        - id: DEC-018
+          statement: >
+            The report is readable in a non-editing view mode (rendered
+            reading surface) as an alternative to the block editor; the
+            editing mode remains the typing surface.
+          evidence: [H22]
 
 agent_context:
   research:
