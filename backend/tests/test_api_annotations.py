@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tests.conftest import ALPHA_CONTENT, MARKER, imported_project
+from tests.conftest import ALPHA_CONTENT, MARKER, Harness, imported_project
 
 
 def _alpha_offsets() -> tuple[int, int]:
@@ -146,3 +146,46 @@ def test_annotation_never_touches_source_file(client: TestClient, sample_tree: P
     client.post(f"/api/v1/resources/{alpha_id}/notes", json={"content": "note text"})
     disk_text = (sample_tree / "alpha.md").read_text(encoding="utf-8")
     assert disk_text == ALPHA_CONTENT
+
+
+def test_annotations_refetch_after_reload(
+    harness: Harness, client: TestClient, sample_tree: Path
+) -> None:
+    _project_id, files = imported_project(client, sample_tree)
+    alpha_id = files["alpha.md"]
+    start, end = _alpha_offsets()
+
+    highlight = client.post(
+        f"/api/v1/resources/{alpha_id}/highlights",
+        json={"start_offset": start, "end_offset": end},
+    ).json()
+    client.post(
+        f"/api/v1/resources/{alpha_id}/notes",
+        json={"content": "Anchored thought.", "start_offset": start, "end_offset": end},
+    )
+    client.post(
+        f"/api/v1/resources/{alpha_id}/notes",
+        json={"content": "Unanchored thought."},
+    )
+
+    listed = client.get(f"/api/v1/resources/{alpha_id}/annotations")
+    assert listed.status_code == 200
+    annotations = listed.json()
+    assert [a["kind"] for a in annotations] == ["highlight", "note", "note"]
+    assert [a["start_offset"] for a in annotations] == [start, start, None]
+    assert [a["end_offset"] for a in annotations] == [end, end, None]
+    assert [a["content"] for a in annotations] == [
+        highlight["content"],
+        "Anchored thought.",
+        "Unanchored thought.",
+    ]
+
+    with TestClient(harness.app) as reloaded:
+        again = reloaded.get(f"/api/v1/resources/{alpha_id}/annotations")
+    assert again.status_code == 200
+    assert again.json() == annotations
+    assert client.get(f"/api/v1/resources/{alpha_id}").json()["content"] == ALPHA_CONTENT
+
+
+def test_annotations_get_unknown_resource_404(client: TestClient) -> None:
+    assert client.get("/api/v1/resources/999999/annotations").status_code == 404

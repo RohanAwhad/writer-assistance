@@ -48,6 +48,11 @@ def get_expert_run_notes(db: DbDep, run_id: int) -> ExpertRunOut:
     return experts.get_expert_run_notes(db, run_id)
 
 
+@router.get("/rounds/{round_id}/expert-runs", response_model=ExpertRunsOut)
+def get_round_expert_runs(db: DbDep, round_id: int) -> ExpertRunsOut:
+    return experts.list_round_expert_runs(db, round_id)
+
+
 @router.patch("/expert-notes/{note_id}", response_model=ExpertNoteOut)
 def update_expert_note(db: DbDep, note_id: int, body: ExpertNoteUpdate) -> ExpertNoteOut:
     return experts.update_expert_note(db, note_id, body.review_state, body.content)

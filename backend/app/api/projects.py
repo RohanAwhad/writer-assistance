@@ -74,6 +74,11 @@ def create_note(db: DbDep, resource_id: int, body: NoteCreate) -> AnnotationOut:
     return annotations.create_note(db, resource_id, body)
 
 
+@router.get("/resources/{resource_id}/annotations", response_model=list[AnnotationOut])
+def list_annotations(db: DbDep, resource_id: int) -> list[AnnotationOut]:
+    return annotations.list_annotations(db, resource_id)
+
+
 @router.put("/annotations/{annotation_id}", response_model=AnnotationOut)
 def update_annotation(db: DbDep, annotation_id: int, body: AnnotationUpdate) -> AnnotationOut:
     return annotations.update_annotation(db, annotation_id, body)

@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS expert_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     round_id INTEGER NOT NULL REFERENCES reading_rounds(id) ON DELETE CASCADE,
     doc_id INTEGER NOT NULL REFERENCES resource_nodes(id) ON DELETE CASCADE,
+    lens_proposal_id INTEGER NOT NULL REFERENCES lens_proposals(id) ON DELETE CASCADE,
     lens_title TEXT NOT NULL,
     created_at TEXT NOT NULL,
     UNIQUE (round_id, doc_id, lens_title)

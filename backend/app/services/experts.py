@@ -22,8 +22,11 @@ _FINAL_STATES = ("accepted", "discarded", "merged-with-edits")
 
 def _note_out(conn: sqlite3.Connection, note_id: int) -> ExpertNoteOut:
     row = conn.execute(
-        """SELECT id, expert_run_id, content, edited_content, review_state, position
-           FROM expert_notes WHERE id = ?""",
+        """SELECT en.id, en.expert_run_id, en.content, en.edited_content, en.review_state,
+                  en.position,
+                  EXISTS(SELECT 1 FROM notes_dump_entries e
+                         WHERE e.expert_note_id = en.id) AS merged
+           FROM expert_notes en WHERE en.id = ?""",
         (note_id,),
     ).fetchone()
     if row is None:
@@ -34,15 +37,18 @@ def _note_out(conn: sqlite3.Connection, note_id: int) -> ExpertNoteOut:
         content=str(row["content"]),
         edited_content=row["edited_content"],
         review_state=row["review_state"],
+        merged=int(row["merged"]) == 1,
         position=int(row["position"]),
     )
 
 
 def _run_out(conn: sqlite3.Connection, run_id: int) -> ExpertRunOut:
     run = conn.execute(
-        """SELECT r.id, r.round_id, r.doc_id, r.lens_title, n.path AS doc_path
+        """SELECT r.id, r.round_id, r.doc_id, r.lens_proposal_id, r.lens_title,
+                  n.path AS doc_path, lp.rationale AS lens_rationale
            FROM expert_runs r
            JOIN resource_nodes n ON n.id = r.doc_id
+           JOIN lens_proposals lp ON lp.id = r.lens_proposal_id
            WHERE r.id = ?""",
         (run_id,),
     ).fetchone()
@@ -62,6 +68,8 @@ def _run_out(conn: sqlite3.Connection, run_id: int) -> ExpertRunOut:
         round_id=int(run["round_id"]),
         doc_id=int(run["doc_id"]),
         doc_path=str(run["doc_path"]),
+        lens_proposal_id=int(run["lens_proposal_id"]),
+        lens_rationale=str(run["lens_rationale"]),
         lens_title=str(run["lens_title"]),
         notes=notes,
     )
@@ -111,9 +119,9 @@ def run_experts(
         doc = require_file_doc(conn, doc_id)
         drafts = ai.expert_notes(str(doc["path"]), str(doc["content"]), lens_title)
         inserted_run = conn.execute(
-            """INSERT INTO expert_runs (round_id, doc_id, lens_title, created_at)
-               VALUES (?, ?, ?, ?) RETURNING id""",
-            (round_id, doc_id, lens_title, ts),
+            """INSERT INTO expert_runs (round_id, doc_id, lens_proposal_id, lens_title, created_at)
+               VALUES (?, ?, ?, ?, ?) RETURNING id""",
+            (round_id, doc_id, proposal_id, lens_title, ts),
         ).fetchone()
         if inserted_run is None:
             raise RuntimeError("expert run insert returned no row")
@@ -133,6 +141,19 @@ def run_experts(
 
 def get_expert_run_notes(conn: sqlite3.Connection, run_id: int) -> ExpertRunOut:
     return _run_out(conn, run_id)
+
+
+def list_round_expert_runs(conn: sqlite3.Connection, round_id: int) -> ExpertRunsOut:
+    """The round's expert runs with lens/doc info and notes, for re-review after reload."""
+    rounds_service.require_round(conn, round_id)
+    rows = list(
+        iter_rows(
+            conn,
+            "SELECT id FROM expert_runs WHERE round_id = ? ORDER BY id",
+            (round_id,),
+        )
+    )
+    return ExpertRunsOut(expert_runs=[_run_out(conn, int(row["id"])) for row in rows])
 
 
 def _require_reviewable(conn: sqlite3.Connection, note_id: int) -> tuple[sqlite3.Row, sqlite3.Row]:

@@ -186,6 +186,7 @@ class ExpertNoteOut(BaseModel):
     content: str
     edited_content: str | None
     review_state: ExpertNoteState
+    merged: bool
     position: int
 
 
@@ -194,6 +195,8 @@ class ExpertRunOut(BaseModel):
     round_id: RoundId
     doc_id: NodeId
     doc_path: str
+    lens_proposal_id: int
+    lens_rationale: str
     lens_title: str
     notes: list[ExpertNoteOut]
 

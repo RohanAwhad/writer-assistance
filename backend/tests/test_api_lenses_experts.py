@@ -4,7 +4,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tests.conftest import imported_project, make_round, select_and_run_experts
+from tests.conftest import (
+    Harness,
+    imported_project,
+    make_round,
+    select_and_run_experts,
+)
 
 
 def test_lens_proposal_lifecycle(client: TestClient, sample_tree: Path) -> None:
@@ -207,3 +212,75 @@ def test_merge_with_edits_and_discard_gates(client: TestClient, sample_tree: Pat
     client.patch(f"/api/v1/expert-notes/{second_id}", json={"review_state": "discarded"})
     rejected = client.post(f"/api/v1/expert-notes/{second_id}/merge", json={})
     assert rejected.status_code == 409
+
+
+def test_round_expert_runs_refetch_after_reload(
+    harness: Harness, client: TestClient, sample_tree: Path
+) -> None:
+    project_id, files = imported_project(client, sample_tree)
+    alpha_id = files["alpha.md"]
+    round_id = make_round(client, project_id, [alpha_id])
+
+    proposals = client.post(f"/api/v1/resources/{alpha_id}/lens-proposals", json={}).json()
+    proposal_id = int(proposals[0]["id"])
+    client.patch(f"/api/v1/lens-proposals/{proposal_id}", json={"status": "selected"})
+    run_response = client.post(
+        f"/api/v1/rounds/{round_id}/experts",
+        json={"lens_proposal_ids": [proposal_id]},
+    )
+    assert run_response.status_code == 201
+    run_id = int(run_response.json()["expert_runs"][0]["id"])
+
+    listed = client.get(f"/api/v1/rounds/{round_id}/expert-runs")
+    assert listed.status_code == 200
+    runs = listed.json()["expert_runs"]
+    assert len(runs) == 1
+    run = runs[0]
+    assert run["id"] == run_id
+    assert run["round_id"] == round_id
+    assert run["doc_id"] == alpha_id
+    assert run["doc_path"] == "alpha.md"
+    assert run["lens_proposal_id"] == proposal_id
+    assert run["lens_title"] == "Financial"
+    assert run["lens_rationale"] == "Finance reading of the document."
+    assert [note["position"] for note in run["notes"]] == [0, 1, 2]
+    assert [note["review_state"] for note in run["notes"]] == ["pending", "pending", "pending"]
+    assert all(note["merged"] is False for note in run["notes"])
+
+    note_ids = [int(note["id"]) for note in run["notes"]]
+    client.patch(f"/api/v1/expert-notes/{note_ids[0]}", json={"review_state": "discarded"})
+    merged = client.post(
+        f"/api/v1/expert-notes/{note_ids[1]}/merge",
+        json={"content": "Edited expert observation."},
+    )
+    assert merged.status_code == 201
+    before = client.get(f"/api/v1/rounds/{round_id}/expert-runs").json()
+
+    with TestClient(harness.app) as reloaded:
+        restored = reloaded.get(f"/api/v1/rounds/{round_id}/expert-runs")
+    assert restored.status_code == 200
+    assert restored.json() == before
+    restored_run = restored.json()["expert_runs"][0]
+    assert restored_run["lens_proposal_id"] == proposal_id
+    assert restored_run["lens_rationale"] == "Finance reading of the document."
+    assert [note["review_state"] for note in restored_run["notes"]] == [
+        "discarded",
+        "merged-with-edits",
+        "pending",
+    ]
+    assert restored_run["notes"][0]["merged"] is False
+    assert restored_run["notes"][1]["merged"] is True
+    assert restored_run["notes"][1]["edited_content"] == "Edited expert observation."
+    assert restored_run["notes"][2]["merged"] is False
+
+
+def test_round_expert_runs_empty_round(client: TestClient, sample_tree: Path) -> None:
+    project_id, files = imported_project(client, sample_tree)
+    round_id = make_round(client, project_id, [files["alpha.md"]])
+    listed = client.get(f"/api/v1/rounds/{round_id}/expert-runs")
+    assert listed.status_code == 200
+    assert listed.json() == {"expert_runs": []}
+
+
+def test_round_expert_runs_unknown_round_404(client: TestClient) -> None:
+    assert client.get("/api/v1/rounds/999999/expert-runs").status_code == 404

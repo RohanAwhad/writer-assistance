@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from app.db import fetch_one, now_utc
+from app.db import fetch_one, iter_rows, now_utc
 from app.errors import BadRequestError, NotFoundError
 from app.schemas import AnnotationOut, AnnotationUpdate, HighlightCreate, NoteCreate
 from app.services.resources import require_file_doc
@@ -69,6 +69,21 @@ def create_note(conn: sqlite3.Connection, doc_id: int, req: NoteCreate) -> Annot
         raise RuntimeError("annotation insert returned no row")
     conn.commit()
     return _annotation_out(conn, int(inserted["id"]))
+
+
+def list_annotations(conn: sqlite3.Connection, doc_id: int) -> list[AnnotationOut]:
+    """All annotations (highlights + notes, incl. note-only rows) of a doc snapshot."""
+    require_file_doc(conn, doc_id)
+    rows = list(
+        iter_rows(
+            conn,
+            """SELECT id FROM annotations
+               WHERE doc_id = ?
+               ORDER BY start_offset IS NULL, start_offset, created_at, id""",
+            (doc_id,),
+        )
+    )
+    return [_annotation_out(conn, int(row["id"])) for row in rows]
 
 
 def _require_annotation(conn: sqlite3.Connection, annotation_id: int) -> sqlite3.Row:

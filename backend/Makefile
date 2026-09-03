@@ -1,4 +1,4 @@
-.PHONY: setup run test typecheck lint
+.PHONY: setup run test typecheck lint reset-db
 
 setup:
 	uv sync
@@ -14,3 +14,6 @@ typecheck:
 
 lint:
 	uv run ruff check app tests
+
+reset-db:
+	rm -f data/writer-assistance.db
