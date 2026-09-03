@@ -5,8 +5,8 @@ project:
   root: /Users/rawhad/1_Projects/personal_projects/writer-assistance-my-ux
 
 snapshot:
-  source_session: ses_f98b2bb30ffey64rgIKhdFrc3b
-  captured_through: msg_0675a2edd001IHqFArCO1u6Bah
+  source_session: ses_f989045f3ffeGJQ4xUDayfHs6O
+  captured_through: msg_0680baab5001aLeI1Fcarwz5rl
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -85,6 +85,122 @@ evidence:
       generate 5 samples based on different tone, based ont he context of
       the report. 2. I want the AI to start critiquing my argument and
       challenging me, so that i can better formulate my argument.
+  H10:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_0676fbaeb0011Qc2Hly3OCJB5Q
+    quote: >
+      Based on .hai, I want you to use subagents to write down a spec and
+      review it and run those 2 in loop till reviewer says that the spec is
+      in compliance with the human intent and decisions. the agent
+      assumptions are malleable and soft, those can change and be updated.
+      If there are conflicting human decisions or constraints that cannot be
+      satisfied bring those up with me. commit regularly.
+  H11:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06775a8600013igP1XO6MjVypO
+    quote: answer those now. is this pushed to remote?
+  H12:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06775e488001a2akEgrYKJVif2
+    quote: >
+      we are trying out a new thing. main has an implementation with a
+      different way of building, I am trying out a new harness for building,
+      and you are part of that harness. so i want you to work with me on
+      this one. Dont copy main directly. Ask me geniune questions, which are
+      like one-way door philosophy from Amazon. One-way door is mistakes
+      which cannot be rectified. So these decisions should include me. A
+      2-way door is mistakes you can rectify, so in this scenario, go ahead
+      with the best possible decision that you can make, and then if I dont
+      like it, or in future we want to choose something else, we can.
+  A1:
+    actor: agent
+    type: proposal
+    source_ref: msg_06775e488001a2akEgrYKJVif2
+    summary: >
+      Asked how to treat origin/main (which holds a working v1 "Writer's
+      Desk" of the same app): reconcile spec with main / answer OQs
+      abstractly / treat main as stale; and whether to push the two local
+      commits on built-using-hai.
+  H13:
+    actor: human
+    type: explicit_selection
+    source_ref: msg_06775e488001a2akEgrYKJVif2
+    selections:
+      push_commits: "Yes, push built-using-hai"
+    proposal_ref: A1
+  A2:
+    actor: agent
+    type: proposal
+    source_ref: msg_067793ca7001bOU0fVbn6nY1aB
+    summary: >
+      One-way-door questions: where resource markdown files live (reference
+      real disk folder / import into app snapshot / live disk + DB anchors)
+      and run context (local single-user / deployed-hosted). Two-way-door
+      OQ-02..06 resolutions were proposed agent-side (multi-round per
+      project, typed-entry dump, minimal export, one-shot generation,
+      AI-proposed lenses only).
+  H14:
+    actor: human
+    type: explicit_selection
+    source_ref: msg_067793ca7001bOU0fVbn6nY1aB
+    selections:
+      resource_origin: "Import into app (snapshot)"
+      run_context: "Local single-user (Recommended)"
+    proposal_ref: A2
+  H15:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_0677af454001dyz36ynIRQ7lU4
+    quote: >
+      And also make sure to have tests or verifications, manual and
+      automatic tests, and use cases in the spec.
+  H16:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_0678593fd001q9If05MWgwlux4
+    quote: >
+      next up, I would like you to spin builder and reviewer, which will go
+      in loop one after another. builder will build based on the spec that
+      was created, and reviewer will also review based on that. they will
+      loop till either reviewer is satisfied with the built output, or
+      decides that spec needs to be modified, in which case, you will resume
+      the spec + spec_review agents with the feedback. and that go on loop
+      and move ahead whenever ready. Spec reviewer agent also has the option
+      to modify the agent related things in the .hai like before. but for
+      human intents/decisions/instructions that are mentioned in the hai,
+      agent has to come to you to take permission about it, and you can then
+      ask me, and we can go in loop till we finalize the hai, and then we
+      can pass it on to spec and then builder. Again, both have their own
+      reviewer agent loops
+  H17:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_067e25790001tQ2saCnysVPfMd
+    quote: you can spin up the servers and run the manual check using a subagent.
+  H18:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_067f249ed001UHVCGwljOv4ESH
+    quote: >
+      we should use `.env` so that load_dotenv fixes this. and .env should
+      take precedence
+  H19:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06800eebc001bR06Zp8L26WdaF
+    quote: >
+      use the checkpoint-intent skill to update the hai and the commit and
+      push. skill is under ~/.claude/skills
+  H20:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_0680baab5001aLeI1Fcarwz5rl
+    quote: >
+      revert your latest commit, and reread /checkpoint-intent skill becauase
+      i updated it, and then show me the plan before you actually edit it
 
 human_approved:
   intents:
@@ -110,6 +226,17 @@ human_approved:
             Use the AnthropicVertex client for all AI calls, with
             credentials read from existing env vars in ~/.zshrc.
           evidence: [H2]
+        - id: DEC-014
+          statement: >
+            The app runs locally on the human's machine as a single user;
+            no authentication, no hosting.
+          evidence: [H14]
+        - id: DEC-015
+          statement: >
+            Runtime config is read from a backend/.env file via
+            python-dotenv with override=True; .env takes precedence over
+            shell-exported env vars; .env.example documents the names.
+          evidence: [H18]
 
     - id: INT-002
       scope: project
@@ -129,6 +256,13 @@ human_approved:
             The human reads resources and makes notes/highlights; resources
             themselves are never edited.
           evidence: [H4]
+        - id: DEC-016
+          statement: >
+            Resource trees are imported into the app at project setup and
+            stored as an immutable snapshot in app storage (SQLite);
+            external file changes after import are not tracked; resources
+            stay read-only.
+          evidence: [H14]
 
     - id: INT-003
       scope: project
@@ -186,6 +320,95 @@ human_approved:
             argument to help formulate it better.
           evidence: [H9]
 
+    - id: INT-005
+      scope: session_workflow
+      lifecycle: completed
+      statement: >
+        Produce spec.md for the writing-assistance app, resolve its open
+        questions with the human, and iterate until the spec-reviewer
+        approves compliance with .hai human intent and decisions.
+      evidence: [H10, H11, H15, A2]
+      instructions:
+        - id: INS-001
+          statement: >
+            Run spec-writer and spec-reviewer subagents in a loop until the
+            reviewer says the spec is in compliance with human intent and
+            decisions; agent assumptions are malleable and may be changed;
+            conflicting human decisions or unsatisfiable constraints are
+            surfaced to the human.
+          evidence: [H10]
+        - id: INS-002
+          statement: Commit regularly and keep the branch pushed to the remote.
+          evidence: [H10, H13]
+        - id: INS-003
+          statement: >
+            The spec must include use cases and tests/verifications, both
+            manual and automatic.
+          evidence: [H15]
+        - id: INS-004
+          statement: >
+            Answer the spec's open questions (OQ-01..06) with the human
+            (resolved 2026-09-03; human selections recorded as DEC-014,
+            DEC-016) and confirm whether commits were pushed.
+          evidence: [H11, A2]
+
+    - id: INT-006
+      scope: session_workflow
+      lifecycle: completed
+      statement: >
+        Build the app (backend + frontend) per the approved spec using
+        builder/build-reviewer loops, resuming the spec loop whenever review
+        requests spec changes.
+      evidence: [H16, H12, A1]
+      instructions:
+        - id: INS-005
+          statement: >
+            Run builder and build-reviewer subagents in a loop; if the
+            reviewer says the spec needs modification, resume the spec +
+            spec-reviewer agents with the feedback, then continue building.
+            The spec reviewer may modify agent-related sections of .hai
+            directly; changes touching human intents/decisions/instructions
+            in .hai require explicit human permission first.
+          evidence: [H16]
+        - id: INS-006
+          statement: >
+            One-way-door decisions (mistakes that cannot be rectified) are
+            asked to the human; two-way-door decisions (rectifiable
+            mistakes) are made by the agent with best judgment and remain
+            changeable later.
+          evidence: [H12]
+        - id: INS-007
+          statement: >
+            Do not copy origin/main's existing Writer's Desk implementation;
+            treat it as prior art only, never as source.
+          evidence: [H12, A1]
+
+    - id: INT-007
+      scope: one_shot_operation
+      lifecycle: completed
+      statement: >
+        Run the integration milestone: spin up backend + frontend servers
+        and execute the spec's manual verification checklist via a subagent.
+      evidence: [H17]
+      instructions:
+        - id: INS-008
+          statement: Spin up the servers and run the manual check using a subagent.
+          evidence: [H17]
+
+    - id: INT-008
+      scope: one_shot_operation
+      lifecycle: completed
+      statement: >
+        Checkpoint this session into .hai via the checkpoint-intent skill
+        (following the skill's protocol), then commit and push.
+      evidence: [H19, H20]
+      instructions:
+        - id: INS-009
+          statement: >
+            Use the checkpoint-intent skill to update the hai, then commit
+            and push.
+          evidence: [H19, H20]
+
 agent_context:
   research:
     - id: RES-001
@@ -193,14 +416,28 @@ agent_context:
       statement: >
         Runtime configuration comes from environment variables, loaded from a
         backend/.env file via python-dotenv with override=True (human decision
-        2026-09-03: .env takes precedence over shell-exported vars, because the
-        shell's ANTHROPIC_MODEL form 'claude-opus-4-8[1m]' is a Claude Code
-        alias invalid for direct Vertex calls). Names: ANTHROPIC_VERTEX_PROJECT_ID,
-        ANTHROPIC_MODEL, ANTHROPIC_SMALL_FAST_MODEL, GOOGLE_VERTEX_LOCATION
-        (alias VERTEX_LOCATION), VERTEX_ACCESS_TOKEN, ANTHROPIC_BASE_URL,
-        ANTHROPIC_CUSTOM_MODEL_OPTION*.
+        2026-09-03, DEC-015: .env takes precedence over shell-exported vars,
+        because the shell's ANTHROPIC_MODEL form 'claude-opus-4-8[1m]' is a
+        Claude Code alias invalid for direct Vertex calls). Names:
+        ANTHROPIC_VERTEX_PROJECT_ID, ANTHROPIC_MODEL, ANTHROPIC_SMALL_FAST_MODEL,
+        GOOGLE_VERTEX_LOCATION (alias VERTEX_LOCATION), VERTEX_ACCESS_TOKEN,
+        ANTHROPIC_BASE_URL, ANTHROPIC_CUSTOM_MODEL_OPTION*.
       basis: human_instruction + environment_configuration_inspection
       source_ref: msg_06754d782001f33sBRQfAuGb6O
+    - id: RES-002
+      intent_ids: [INT-001]
+      statement: >
+        Live Vertex probes (integration run): model alias forms like
+        'claude-opus-4-8[1m]' are rejected (400 INVALID_ARGUMENT);
+        'claude-opus-4-8', 'claude-opus-4-8@default' and 'claude-sonnet-5'
+        are accepted, 'claude-opus-4-8@latest' is not. Auth works via ADC
+        google-auth (no VERTEX_ACCESS_TOKEN needed). The anthropic SDK
+        (>=1.x) requires the 'vertex' extra (anthropic[google] does not
+        exist). Big-model env (ANTHROPIC_MODEL) routes expert notes and
+        report generation; small-fast model (ANTHROPIC_SMALL_FAST_MODEL)
+        routes lens proposals, tone samples, critiques.
+      basis: live_ai_integration_probe
+      source_ref: msg_067ef378f001lYHPKPK63msdSL
 
   assumptions:
     - id: ASM-001
@@ -244,24 +481,62 @@ agent_context:
     - id: ASM-005
       intent_ids: [INT-001]
       statement: >
-        Verification of the AnthropicVertex env vars came from ~/.zshrc; the
-        vars still need to be exported and valid in the runtime environment
-        where the backend runs. Resolved 2026-09-03: backend loads backend/.env
-        (python-dotenv, override=True, .env wins); .env.example documents the
-        names; a valid Vertex model id must be used (alias forms like
-        'claude-opus-4-8[1m]' are rejected).
-      status: resolved
+        The shell environment (~/.zshrc) still exports
+        ANTHROPIC_MODEL=claude-opus-4-8[1m], a Claude Code alias form that
+        is invalid for direct Vertex calls; any runtime that loads
+        configuration without backend/.env (DEC-015) will fail AI calls.
+      status: unverified
       consequence: >
-        Backend AI calls may fail at first run if the env vars are not
-        loaded into the process; keep .env current with valid Vertex ids.
-    - id: ASM-006
-      intent_ids: [INT-001]
+        AI calls fail with Vertex 400 INVALID_ARGUMENT unless .env or a
+        corrected shell env supplies a valid model id.
+    - id: ASM-007
+      intent_ids: [INT-004]
       statement: >
-        The empty backend/ and frontend/ directories at the project root are
-        the intended scaffolding location for this build.
+        A project supports multiple rounds, each with one curated dump and
+        one report; the stage shift applies per round/report.
       status: agent_derived
       consequence: >
-        Code landing elsewhere would need to be relocated.
+        Delegated two-way choice (INS-006); recorded in spec OQ-02.
+        Trivially restrictable later if the human wants one report per
+        project.
+    - id: ASM-008
+      intent_ids: [INT-003]
+      statement: >
+        Curation renders as an ordered dump of typed entries
+        (snippet/highlight/human-thought/ai-thought) built from per-doc
+        pools and free typing.
+      status: agent_derived
+      consequence: >
+        Delegated two-way choice (INS-006); spec OQ-03. UI/UX reshape
+        possible without storage change.
+    - id: ASM-009
+      intent_ids: [INT-004]
+      statement: >
+        Minimal export (download report as Markdown) is in scope for v1; no
+        PDF/DOCX pipelines.
+      status: agent_derived
+      consequence: >
+        Delegated two-way choice (INS-006); spec OQ-04. Feature is trivially
+        added or removed.
+    - id: ASM-010
+      intent_ids: [INT-004]
+      statement: >
+        Report generation is one-shot per round (no destructive
+        regenerate); deleting a report is allowed with an explicit confirm;
+        a new report means a new round.
+      status: agent_derived
+      consequence: >
+        Delegated two-way choice (INS-006); spec OQ-05. Post-delete stage
+        behavior deliberately unspecified; a regenerate feature could be
+        added later.
+    - id: ASM-011
+      intent_ids: [INT-003]
+      statement: >
+        Lenses are AI-proposed only in v1 (human confirms which run);
+        hand-defined custom lenses are deferred with a schema hook.
+      status: agent_derived
+      consequence: >
+        Delegated two-way choice (INS-006); spec OQ-06. Feature add later.
 
   observations:
     - id: OBS-001
@@ -271,7 +546,40 @@ agent_context:
         scratch", empty backend/ and frontend/ dirs, only an untracked
         logs/).
       source_ref: msg_06754d782001f33sBRQfAuGb6O
+    - id: OBS-002
+      intent_ids: [INT-005]
+      statement: >
+        Spec loop PASSed (spec v1.5, all DEC-001..013 covered); backend
+        milestone and frontend milestone built with their own reviewer
+        loops; build-loop feedback FB-1/FB-2 amended spec §6 (annotations +
+        expert-runs GET endpoints) and both milestones passed review.
+      source_ref: msg_067c8d4bf001Ljbpo6FOdsy7Xh
+    - id: OBS-003
+      intent_ids: [INT-007]
+      statement: >
+        Integration milestone PASSed: 13-step §11.2 journey plus 5/5
+        live-AI tests against real AnthropicVertex (model claude-sonnet-5);
+        evidence in logs/integration-2026-09-03.md; dependency fix
+        anthropic[google] -> anthropic[vertex] committed as 649d450.
+      source_ref: msg_067ef378f001lYHPKPK63msdSL
+    - id: OBS-004
+      intent_ids: [INT-001]
+      statement: >
+        .env precedence verified: shell ANTHROPIC_MODEL (claude-opus-4-8[1m])
+        overridden by backend/.env (claude-sonnet-5) after app import;
+        offline suite 68 passed; live AI gate 5/5; commit 0d426b1.
+      source_ref: msg_067f4278a001ep3MoZ1tCCLaSo
 
-  unapproved_actions: []
+  unapproved_actions:
+    - id: ACT-001
+      intent_ids: [INT-007]
+      statement: >
+        The integration subagent changed the backend dependency extra
+        (anthropic[google] -> anthropic[vertex]) and chose to run live tests
+        with model claude-sonnet-5 without prior explicit human approval;
+        both were necessary to proceed, surfaced to the human afterwards,
+        and committed (649d450) with the .env model decision following
+        later (0d426b1).
+      source_ref: msg_067ef378f001lYHPKPK63msdSL
 
 open_questions: []
