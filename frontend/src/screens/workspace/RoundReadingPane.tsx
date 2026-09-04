@@ -43,7 +43,7 @@ export default function RoundReadingPane({
           ? "Loading round…"
           : roundError !== null
             ? `Round failed to load: ${roundError}`
-            : "Select a round from the sidebar to propose lenses and run experts on its docs."}
+            : "Select a round to propose lenses and run experts on its docs."}
       </div>
     );
   }

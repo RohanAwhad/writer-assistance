@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { EmptyHint, InlineError } from "../../components/ui/feedback";
+import { cn } from "../../lib/utils";
 
 interface LeftSidebarProps {
   projectId: number;
@@ -28,6 +29,7 @@ interface LeftSidebarProps {
   activeRoundId: number | null;
   onSelectRound: (roundId: number | null) => void;
   onRoundsChanged: () => void;
+  className?: string;
 }
 
 interface FileNode {
@@ -79,6 +81,7 @@ export default function LeftSidebar({
   activeRoundId,
   onSelectRound,
   onRoundsChanged,
+  className,
 }: LeftSidebarProps) {
   const files = tree !== null ? buildFileRows(tree) : [];
   const hasDocs = files.some((f) => f.node.kind === "file");
@@ -174,7 +177,7 @@ export default function LeftSidebar({
   const resourceCount = fileNodes.length;
 
   return (
-    <div className="flex h-full w-72 flex-col border-r bg-background">
+    <div className={cn("flex h-full w-72 flex-col border-r bg-background", className)}>
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-3">
         <span className="text-sm font-semibold">Resources</span>
         {!hasDocs && (

@@ -212,7 +212,7 @@ export default function CurateView({
       {saveError !== null && <InlineError message={saveError} />}
       {generateError !== null && <InlineError message={generateError} />}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_320px] gap-4 overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-x-hidden overflow-y-auto lg:grid-cols-[1fr_320px] lg:overflow-hidden">
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Dump entries ({draft.length})</h3>

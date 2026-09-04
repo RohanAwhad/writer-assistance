@@ -394,3 +394,38 @@
   NIT M3-1: stale local frontend/dist -> rebuilt (new picker copy confirmed).
 - INT-008 done-gate green (spec.md:410). Release line now requires backend +
   frontend + integration + INT-007 + INT-006 + INT-008 gates — all green.
+
+## 2026-09-04 — INT-009 M1 (m9-1): frontend mobile-view core (spec v2.0, R-082..R-085 frontend leg)
+
+- M1 frontend core only (no backend/.hai/spec changes; not committed yet).
+- Hook: frontend/src/lib/useViewport.ts — useMediaQuery (matchMedia-driven,
+  addEventListener("change"), jsdom-safe: no matchMedia -> false/desktop) +
+  useDeviceClass() resolving SD-31 tiers from exported query constants
+  (phone <=767, tablet 768-1023, desktop >=1024; width-only, no UA sniffing).
+- Narrow arrangement (SD-32): WorkspaceScreen renders the 3-pane layout only
+  when !narrow (desktop regression guard); <1024 the resource/rounds nav
+  (LeftSidebar, new optional className prop, w-72 -> w-full in drawer) and the
+  annotation/round panes (extracted panesArea JSX) open as fixed OverlayPanels
+  (components/ui/overlay.tsx: side drawers, backdrop+close, conditional render)
+  from "Resources & rounds" / "Annotate & round" controls on a narrow surface
+  strip; overlay auto-closes on doc/round pick and on re-entry to desktop.
+  Root h-screen -> global .h-viewport (100vh fallback + @supports 100dvh);
+  dialogs get .dialog-viewport-fit (85vh/85dvh cap + scroll) so footers stay
+  reachable; CurateView pools grid + ReportEditor tone compare stack below
+  lg (grid-cols-1 lg:...), report header wraps.
+- R-085 hover: annotation delete (AnnotationPanel) keeps mouse hover-reveal but
+  adds focus-visible + [@media(hover:none)]:opacity-100 (verified emitted into
+  built css; v4 gates group-hover under @media(hover:hover)). No MarkdownView
+  selection plumbing in M1 (SD-33: only if real-device leg fails).
+- Tests: frontend/src/test/matchMediaMock.ts (installMatchMedia(width) ->
+  setWidth dispatches change events on subscribed mock MQLs; mirrors fetchMock
+  vi.stubGlobal conventions) + responsiveView.test.tsx — 13 tests: phone
+  overlay nav/reachability + back control (App-level) + curate/import/
+  new-round/delete-report dialogs, tablet reachability, desktop regression
+  guard, R-084 phone->tablet->desktop->phone arrangement flip with doc/round/
+  mode preserved + GET-only calls + onBack not called, R-085 delete-by-tap +
+  dialog footers, provider <select> PUT at phone width.
+- Gates: vitest 11 files / 63 tests (50 pre-existing + 13 new) green x3 runs;
+  tsc --noEmit clean; eslint clean; vite build ok (hover:none + dvh emission
+  checked in dist css). Manual legs (§11.2 steps 24-26) still pending + M2
+  pytest viewport-meta assertion.

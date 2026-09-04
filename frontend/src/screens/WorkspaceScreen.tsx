@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Folder, MessageSquarePlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type {
@@ -16,6 +16,8 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { EmptyHint, InlineError } from "../components/ui/feedback";
 import { Separator } from "../components/ui/misc";
+import { OverlayPanel } from "../components/ui/overlay";
+import { useDeviceClass } from "../lib/useViewport";
 import AnnotationPanel from "./workspace/AnnotationPanel";
 import CurateView, { type PoolItem } from "./workspace/CurateView";
 import LeftSidebar from "./workspace/LeftSidebar";
@@ -37,6 +39,21 @@ interface RoundDetailState {
 }
 
 export default function WorkspaceScreen({ projectId, projectName, onBack }: WorkspaceScreenProps) {
+  const deviceClass = useDeviceClass();
+  // INT-009 (SD-31/32): below 1024 CSS px the side-by-side panes move behind
+  // overlay panels opened from controls on the content surface; >= 1024 keeps
+  // the three-pane arrangement unchanged. Narrow-mode is derived UI state.
+  const narrow = deviceClass !== "desktop";
+  const [navOverlayOpen, setNavOverlayOpen] = useState(false);
+  const [panesOverlayOpen, setPanesOverlayOpen] = useState(false);
+
+  useEffect(() => {
+    if (!narrow) {
+      setNavOverlayOpen(false);
+      setPanesOverlayOpen(false);
+    }
+  }, [narrow]);
+
   const [tree, setTree] = useState<TreeOut | null>(null);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [rounds, setRounds] = useState<RoundSummary[] | null>(null);
@@ -498,21 +515,67 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
     );
   }, [activeDoc]);
 
+  const openDocFromNav = (docId: number): void => {
+    setNavOverlayOpen(false);
+    void ensureDoc(docId);
+  };
+
+  const selectRoundFromNav = (roundId: number | null): void => {
+    setNavOverlayOpen(false);
+    void selectRound(roundId);
+  };
+
+  const panesArea =
+    docResource === null ? (
+      <EmptyHint>Open a resource to annotate it and to run the round flow on its docs.</EmptyHint>
+    ) : (
+      <div className="space-y-4">
+        <AnnotationPanel
+          docId={docResource.id}
+          docContent={docResource.content}
+          docPath={docResource.path}
+          annotations={activeDoc?.annotations ?? []}
+          selection={selection}
+          onAddAnnotation={addAnnotation}
+          onDeleteAnnotation={removeAnnotation}
+        />
+        <Separator />
+        <RoundReadingPane
+          round={roundDetailState?.detail ?? null}
+          roundLoading={roundDetailState?.status === "loading" && activeRoundId !== null}
+          roundError={roundDetailState?.error ?? null}
+          docId={docResource.id}
+          docInRound={docInRound}
+          lens={lensState}
+          experts={expertState}
+          onRetryExperts={retryExpertLoad}
+          onProposeLenses={() => void proposeLensesForDoc()}
+          onSetProposalStatus={(proposalId, status) => void setProposalStatus(proposalId, status)}
+          onRunSelected={() => void runSelectedExperts()}
+          onKeepNote={keepNote}
+          onDiscardNote={discardNote}
+          onMergeNote={(note, content) => mergeNote(note, content)}
+        />
+      </div>
+    );
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <LeftSidebar
-        projectId={projectId}
-        tree={tree}
-        treeError={treeError}
-        activeDocId={activeDocId}
-        onOpenDoc={(docId) => void ensureDoc(docId)}
-        onTreeChanged={() => void loadTree()}
-        rounds={rounds}
-        roundsError={roundsError}
-        activeRoundId={activeRoundId}
-        onSelectRound={(roundId) => void selectRound(roundId)}
-        onRoundsChanged={() => void loadRounds()}
-      />
+    <div className="flex h-viewport overflow-hidden bg-background">
+      {!narrow && (
+        <LeftSidebar
+          projectId={projectId}
+          tree={tree}
+          treeError={treeError}
+          activeDocId={activeDocId}
+          onOpenDoc={(docId) => void ensureDoc(docId)}
+          onTreeChanged={() => void loadTree()}
+          rounds={rounds}
+          roundsError={roundsError}
+          activeRoundId={activeRoundId}
+          onSelectRound={(roundId) => void selectRound(roundId)}
+          onRoundsChanged={() => void loadRounds()}
+        />
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b px-4 py-1.5">
           <div className="flex min-w-0 items-center gap-2">
@@ -532,6 +595,31 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
             <ProviderSelector projectId={projectId} />
           </div>
         </header>
+        {narrow && (
+          <div
+            data-testid="narrow-surface-controls"
+            className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-1.5"
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setNavOverlayOpen(true)}
+              data-testid="open-nav-overlay"
+            >
+              <Folder className="mr-1 h-3 w-3" />
+              Resources & rounds
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPanesOverlayOpen(true)}
+              data-testid="open-panes-overlay"
+            >
+              <MessageSquarePlus className="mr-1 h-3 w-3" />
+              Annotate & round
+            </Button>
+          </div>
+        )}
         {roundForHeader !== null && (
           <RoundStageHeader
             round={roundForHeader}
@@ -570,7 +658,7 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
                   <div className="p-5">
                     <EmptyHint>
                       {tree !== null && tree.nodes.length === 0
-                        ? "This project has no resources. Use Import in the left panel to upload Markdown files from your browser."
+                        ? "This project has no resources. Use Import to upload Markdown files from your browser."
                         : "Select a resource from the tree to read it. Resources are read-only — annotate instead of editing."}
                     </EmptyHint>
                   </div>
@@ -596,42 +684,32 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
               </div>
             )}
           </main>
-          <aside className="w-[360px] shrink-0 overflow-y-auto border-l p-4">
-            {docResource === null ? (
-              <EmptyHint>Open a resource to annotate it and to run the round flow on its docs.</EmptyHint>
-            ) : (
-              <div className="space-y-4">
-                <AnnotationPanel
-                  docId={docResource.id}
-                  docContent={docResource.content}
-                  docPath={docResource.path}
-                  annotations={activeDoc?.annotations ?? []}
-                  selection={selection}
-                  onAddAnnotation={addAnnotation}
-                  onDeleteAnnotation={removeAnnotation}
-                />
-                <Separator />
-                <RoundReadingPane
-                  round={roundDetailState?.detail ?? null}
-                  roundLoading={roundDetailState?.status === "loading" && activeRoundId !== null}
-                  roundError={roundDetailState?.error ?? null}
-                  docId={docResource.id}
-                  docInRound={docInRound}
-                  lens={lensState}
-                  experts={expertState}
-                  onRetryExperts={retryExpertLoad}
-                  onProposeLenses={() => void proposeLensesForDoc()}
-                  onSetProposalStatus={(proposalId, status) => void setProposalStatus(proposalId, status)}
-                  onRunSelected={() => void runSelectedExperts()}
-                  onKeepNote={keepNote}
-                  onDiscardNote={discardNote}
-                  onMergeNote={(note, content) => mergeNote(note, content)}
-                />
-              </div>
-            )}
-          </aside>
+          {!narrow && <aside className="w-[360px] shrink-0 overflow-y-auto border-l p-4">{panesArea}</aside>}
         </div>
       </div>
+      {narrow && navOverlayOpen && (
+        <OverlayPanel side="left" title="Resources & rounds" onClose={() => setNavOverlayOpen(false)}>
+          <LeftSidebar
+            projectId={projectId}
+            tree={tree}
+            treeError={treeError}
+            activeDocId={activeDocId}
+            onOpenDoc={openDocFromNav}
+            onTreeChanged={() => void loadTree()}
+            rounds={rounds}
+            roundsError={roundsError}
+            activeRoundId={activeRoundId}
+            onSelectRound={selectRoundFromNav}
+            onRoundsChanged={() => void loadRounds()}
+            className="w-full border-r-0"
+          />
+        </OverlayPanel>
+      )}
+      {narrow && panesOverlayOpen && (
+        <OverlayPanel side="right" title="Annotate & round" onClose={() => setPanesOverlayOpen(false)}>
+          <div className="p-4">{panesArea}</div>
+        </OverlayPanel>
+      )}
     </div>
   );
 }

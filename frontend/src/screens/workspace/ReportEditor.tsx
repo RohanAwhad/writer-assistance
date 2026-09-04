@@ -176,8 +176,8 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-5 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-b px-5 py-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold">{surface === "view" ? "Report" : "Report editor"}</h2>
           <Badge variant="outline">{roundName}</Badge>
           <span className="text-xs text-muted-foreground">
@@ -497,7 +497,7 @@ function BlockEditorCard({
               ))}
             </div>
             {previewIndex !== null && assist.tone.samples[previewIndex] !== undefined && (
-              <div className="grid grid-cols-2 gap-3 rounded-md border bg-background p-3">
+              <div className="grid grid-cols-1 gap-3 rounded-md border bg-background p-3 lg:grid-cols-2">
                 <div>
                   <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Current paragraph

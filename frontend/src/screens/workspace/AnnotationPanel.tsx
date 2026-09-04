@@ -189,7 +189,10 @@ export default function AnnotationPanel({
                 <button
                   type="button"
                   aria-label="Delete annotation"
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  // INT-009 (SD-33/R-085): the delete control is hover-revealed for
+                  // pointer users only; on coarse-pointer devices ((hover: none)) and
+                  // on keyboard focus it is always visible and operable by tap.
+                  className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                   onClick={() => void remove(annotation.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

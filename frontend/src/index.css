@@ -67,6 +67,33 @@
   }
 }
 
+/* INT-009 (SD-32): full-viewport chrome heights use the dynamic viewport unit
+   with a plain-vh fallback, so bottom-anchored controls are not hidden behind
+   mobile browser chrome. Unlayered author CSS wins over the Tailwind utility
+   layers regardless of rule order. */
+.h-viewport {
+  height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  .h-viewport {
+    height: 100dvh;
+  }
+}
+
+/* INT-009 (R-082/R-085): dialogs cap at the viewport and scroll internally so
+   their footers stay reachable on short/touch viewports. */
+.dialog-viewport-fit {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+@supports (height: 100dvh) {
+  .dialog-viewport-fit {
+    max-height: 85dvh;
+  }
+}
+
 .doc-prose {
   font-size: 0.9375rem;
   line-height: 1.75;
