@@ -429,3 +429,34 @@
   tsc --noEmit clean; eslint clean; vite build ok (hover:none + dvh emission
   checked in dist css). Manual legs (§11.2 steps 24-26) still pending + M2
   pytest viewport-meta assertion.
+
+## 2026-09-04 — INT-009 M2 (m9-2): integration PASS + INT-009 complete
+
+- Backend additive assertion (only INT-009 backend change): test_auth_gate.py
+  `test_login_page_served_when_gate_on` now asserts GET /login HTML carries the
+  viewport meta (byte-identical to auth.py:87). Gates: pytest 136 passed /
+  8 live-skipped, mypy clean (44 files), ruff clean.
+- Reviewer-run integration (offline, gate-on, isolated DB under /tmp, port
+  8010, fresh frontend build): 5 viewports (390x844, 360x800, iPad 768x1024,
+  1024x768, 1280x900) walked — login, project, browser-picker import, doc
+  read, mouse highlight + anchored note, rounds, tap-delete annotation
+  (opacity 1.0 w/o hover), view/edit switch, provider round-trip, logout 401.
+  Zero page-level horizontal overflow on every surface; rotate leg
+  390->768->1024->768->390: 0 navigations, doc/round/badge preserved. Live-AI
+  controls presence-only (no live calls; not authorized). Evidence:
+  logs/hai-build-loop/m9-2-integration.md + m9-2-*.log + screens/m9-2-*.png
+  (screens untracked per convention).
+- CODE_BLOCKER F-m9-2-1 (r1 FAIL): ReportEditor toolbar clipped "Delete
+  report" at 390/360 (visible 58/28px, center off-viewport). Fix: flex-wrap on
+  ReportEditor.tsx toolbar group + RoundStageHeader.tsx mode group (WARN
+  F-m9-2-2 tail clip). r2 PASS: delete-report bbox x20..147 fully in-viewport
+  at both widths, dialog open/cancel verified, desktop 1280 toolbar unchanged
+  (single row), no h-scroll, console/uvicorn clean.
+- §11.3 INT-009 gate: frontend vitest 63/63 incl. responsive suite, tsc,
+  eslint, backend suite + additive assertion all green; §11.2 steps 24-25
+  emulated legs green (above); step 26 real-device legs remain a HUMAN leg
+  (phone/iPad through public hostname w/ container+tunnel live; long-press
+  selection probe, on-screen keyboard, physical rotation, hover-visibility,
+  tap-target sizing) — residual, owner: human.
+- Commits: f2cf726 spec v2.0; a33e4ad m9-1; 2127928 m9-2. INT-009 complete
+  (pending step-26 human leg + push).
