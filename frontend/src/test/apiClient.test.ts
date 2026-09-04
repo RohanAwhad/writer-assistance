@@ -241,3 +241,47 @@ describe("api client request mapping", () => {
     expect(calls).toHaveLength(1);
   });
 });
+
+describe("401 handling navigates to the login page (R-075)", () => {
+  const originalLocation = window.location;
+
+  function stubLocation(pathname: string): ReturnType<typeof vi.fn> {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: { pathname, assign },
+    });
+    return assign;
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
+  it("full-page navigates to /login when a data call returns 401", async () => {
+    const assign = stubLocation("/workspace");
+    stubFetch(() => error(401, "authentication required"));
+    await expect(api.listProjects()).rejects.toBeInstanceOf(ApiError);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledWith("/login");
+  });
+
+  it("does not navigate on other statuses", async () => {
+    const assign = stubLocation("/workspace");
+    stubFetch(() => error(502, "ai backend failed"));
+    await expect(api.listProjects()).rejects.toBeInstanceOf(ApiError);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("does not re-navigate when already on /login", async () => {
+    const assign = stubLocation("/login");
+    stubFetch(() => error(401, "authentication required"));
+    await expect(api.listProjects()).rejects.toBeInstanceOf(ApiError);
+    expect(assign).not.toHaveBeenCalled();
+  });
+});

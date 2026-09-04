@@ -47,6 +47,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function navigateToLoginOnUnauthorized(): void {
+  // R-075 normative target: any 401 on a data call means logged out; the
+  // server-rendered login page takes over via a full-page navigation (SD-22).
+  if (window.location.pathname !== "/login") {
+    window.location.assign("/login");
+  }
+}
+
 async function request<T>(path: string, options: RequestOptions): Promise<T> {
   const init: RequestInit = {
     method: options.method,
@@ -68,6 +76,9 @@ async function request<T>(path: string, options: RequestOptions): Promise<T> {
       isRecord(payload) && typeof payload.detail === "string"
         ? payload.detail
         : `request failed with status ${response.status}`;
+    if (response.status === 401) {
+      navigateToLoginOnUnauthorized();
+    }
     throw new ApiError(response.status, detail);
   }
   return payload as T;
@@ -251,6 +262,9 @@ export const api = {
         isRecord(payload) && typeof payload.detail === "string"
           ? payload.detail
           : `request failed with status ${response.status}`;
+      if (response.status === 401) {
+        navigateToLoginOnUnauthorized();
+      }
       throw new ApiError(response.status, detail);
     }
     return response.text();

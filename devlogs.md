@@ -297,3 +297,18 @@
     live leg unexecutable; NITs S2F-2..4) → writer r2 fixed all → reviewer r2 PASS
     (1 procedural NIT S2F2-1 applied: drop `-e` flag for shell-absent vars).
 - DEC-014 "no hosting" scope amendment disclosed (§1/§3/§8). No state changes.
+
+## 2026-09-03 — INT-006 M1: auth gate + static serving (build loop)
+
+- Builder: backend/app/auth.py (gate middleware, HMAC-signed wa_session cookie
+  from AUTH_API_KEY, server-rendered /login, POST /logout), create_app(auth_key,
+  static_dir) params; SPA static mount + fallback w/ /api 404-JSON preservation;
+  .env.example += AUTH_API_KEY; frontend client 401 → /login nav + re-nav guard;
+  vite proxy /login /logout. Gate-off default keeps conftest untouched + suite
+  green (SD-24); module app gated via .env key.
+- Gates: backend 123 passed/8 skipped (19 new auth tests); mypy 44 files; ruff
+  clean; frontend 42 tests; tsc/eslint/build clean.
+- Reviewer: PASS_WITH_WARN → M1F-1 WARN (spec §6 draft row said logout → 204;
+  code 302 → /login per F14/UC-20) — §6 amended at this boundary; NITs M1F-2
+  (gate-off+dist GET /login → SPA index, combo never in deployment), M1F-3
+  (conftest gains fallback when dist exists — harmless, prefix-guarded) accepted.

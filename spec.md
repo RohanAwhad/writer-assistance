@@ -186,7 +186,7 @@ All under `/api/v1`, JSON, **local single-user, no auth** (human-resolved 2026-0
 Auth-gate endpoints (R-075; F14 — registered **only when the gate is active**, SD-24; not under `/api/v1`):
 - `GET /login` — server-rendered login page (HTML); 302 → `/` when a valid session already exists
 - `POST /login` — form-encoded field `key`; constant-time comparison against `AUTH_API_KEY`; success → `Set-Cookie` (`wa_session`; HttpOnly, SameSite=Lax, Path=/; Secure per SD-23) + redirect to `/`; wrong key → 401 with the login page re-rendered and an inline error, no cookie
-- `POST /logout` — clears the session cookie → 204
+- `POST /logout` — clears the session cookie → 302 `/login` (returns the app to the login page, F14/UC-20)
 - Gate semantics: unauthenticated `/api/v1/*` → 401 `{"detail": "authentication required"}` (same `{detail}` shape as app/errors.py responses — the SPA's `ApiError` carries it, and the SPA navigates to `/login` on any 401, R-075); unauthenticated non-API paths → 302 `/login`; `GET /login` + `POST /login` + `POST /logout` are the only open paths while the gate is active.
 
 ## 7. Assumptions table
