@@ -488,3 +488,26 @@
 - Residual human legs (step 26, owner: human): native long-press/magnifier on
   real iOS/Android, on-screen keyboard, physical rotation, tunnel/https on
   real phone/iPad, tap-target feel vs <40px buttons.
+
+## 2026-09-04 — INT-009 deploy: rebuilt writer-assistance:live
+
+- Image rebuilt from HEAD 71f5eb6 (origin/built-using-hai; origin/main is stale
+  at 57e9ada — deployed latest code, not stale main). Build from repo root per
+  R-077; .dockerignore keeps secrets/.git/.hai/out dist out of the context
+  (ASM-014).
+- Container recreated with the exact prior config: writer-assistance-live,
+  --network host, restart unless-stopped, gcloud creds ro bind
+  (/gcloud-creds.json), named volume writer-assistance-data:/data,
+  WRITER_ASSISTANCE_DB=/data/writer-assistance.db, --env-file backend/.env
+  (AUTH_API_KEY + ANTHROPIC_MODEL=claude-sonnet-5 — never -e ANTHROPIC_MODEL),
+  -e for DEEPSEEK_API_KEY / ANTHROPIC_VERTEX_PROJECT_ID /
+  ANTHROPIC_SMALL_FAST_MODEL / GOOGLE_VERTEX_LOCATION / VERTEX_LOCATION /
+  GOOGLE_APPLICATION_CREDENTIALS=/gcloud-creds.json. None of the secret values
+  were echoed into logs or commit text.
+- Verified: GET / 302 -> /login; /login 200 + viewport meta; /api/v1/projects
+  401 unauthenticated; POST /login (key from backend/.env) -> 302 + wa_session
+  cookie; SPA served with fresh asset index-NmKjymZI.js containing the INT-009
+  narrow-mode markers ("Resources & rounds", "Annotate & round"); uvicorn boot
+  clean (no errors/warnings). Container Up (restart unless-stopped); tunnel
+  route unchanged (public hostname serves -> 127.0.0.1:8000 -> new image).
+- Next: real-device step-26 leg on the public hostname (phone + iPad).
