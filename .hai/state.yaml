@@ -5,8 +5,8 @@ project:
   root: /home/rohan/1_Projects/writer-assistance
 
 snapshot:
-  source_session: ses_f93a5f767ffehCgMHcyfZ8FMFa
-  captured_through: msg_06c5bd277001Q5P5dP0x90gn36
+  source_session: ses_f92f3c539ffeuDucj2VmSNT7sm
+  captured_through: msg_06d0c6481001qIeXCP7Z2niyw7
   semantics: current_state_at_capture
   superseded_entries: omitted
   historical_source: git
@@ -266,6 +266,13 @@ evidence:
       I would like this app to have a mobile friendly web view as well.
       right now on a mobile it is unusable. Also make sure it’s usable
       on an iPad as well.
+  H38:
+    actor: human
+    type: direct_instruction
+    source_ref: msg_06d0c3afa0011Xrq3Se9uhQCwk
+    quote: >
+      right now we can only upload the markdowns once, i would like to be
+      able to upload later as well /hai-checkpoint-intent
 human_approved:
   intents:
     - id: INT-001
@@ -329,10 +336,10 @@ human_approved:
           evidence: [H4]
         - id: DEC-016
           statement: >
-            Resource trees are imported into the app at project setup and
-            stored as an immutable snapshot in app storage (SQLite);
-            external file changes after import are not tracked; resources
-            stay read-only.
+            Resource trees are imported into the app and stored as an
+            immutable snapshot in app storage (SQLite); external file
+            changes after import are not tracked; resources stay
+            read-only.
           evidence: [H14]
 
     - id: INT-003
@@ -490,6 +497,14 @@ human_approved:
             path import; resources continue to be stored in the app as
             the immutable snapshot (DEC-016).
           evidence: [H35]
+        - id: DEC-029
+          statement: >
+            Uploading Markdown files is not limited to a project's first
+            (only) import: the human can upload additional Markdown files
+            to a project that already has imported resources, at any later
+            point; newly uploaded files join the immutable resource
+            snapshot (DEC-016) alongside the existing ones.
+          evidence: [H38]
     - id: INT-009
       scope: project
       lifecycle: active
