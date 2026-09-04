@@ -5,6 +5,7 @@ import type {
   AnnotationOut,
   DumpOut,
   ExpertRunOut,
+  ProjectDetail,
   ResourceOut,
   RoundDetailOut,
   RoundSummary,
@@ -18,6 +19,16 @@ afterEach(() => {
 });
 
 const iso = "2026-09-03T00:00:00+00:00";
+
+const projectDetail: ProjectDetail = {
+  id: 1,
+  name: "Proj",
+  ai_provider: "deepseek",
+  resource_count: 1,
+  round_count: 1,
+  created_at: iso,
+  updated_at: iso,
+};
 
 const tree: TreeOut = {
   project_id: 1,
@@ -134,6 +145,8 @@ function mountWorkspace(
   const failFirstExpertRuns = opts?.failFirstExpertRuns ?? false;
   const { calls } = stubFetch((call) => {
     switch (call.url) {
+      case "/api/v1/projects/1":
+        return ok(projectDetail);
       case "/api/v1/projects/1/tree":
         return ok(tree);
       case "/api/v1/rounds?project_id=1":
@@ -341,6 +354,8 @@ describe("curate-entry annotation prefetch", () => {
     ]);
     const { calls } = stubFetch((call) => {
       switch (call.url) {
+        case "/api/v1/projects/1":
+          return ok(projectDetail);
         case "/api/v1/projects/1/tree":
           return ok(treeThree);
         case "/api/v1/rounds?project_id=1":
@@ -398,6 +413,8 @@ describe("curate-entry annotation prefetch", () => {
     ]);
     const { calls } = stubFetch((call) => {
       switch (call.url) {
+        case "/api/v1/projects/1":
+          return ok(projectDetail);
         case "/api/v1/projects/1/tree":
           return ok({ project_id: 1, nodes: treeThree.nodes.slice(0, 2) });
         case "/api/v1/rounds?project_id=1":

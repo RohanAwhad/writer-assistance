@@ -1,8 +1,11 @@
 export type IsoDatetime = string;
 
+export type AiProvider = "deepseek" | "vertex";
+
 export interface ProjectOut {
   id: number;
   name: string;
+  ai_provider: AiProvider;
   created_at: IsoDatetime;
   updated_at: IsoDatetime;
 }

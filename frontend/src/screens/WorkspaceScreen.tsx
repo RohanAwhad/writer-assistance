@@ -11,6 +11,7 @@ import type {
   TreeOut,
 } from "../api/types";
 import MarkdownView, { type SelectionResult } from "../components/MarkdownView";
+import ProviderSelector from "../components/ProviderSelector";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { EmptyHint, InlineError } from "../components/ui/feedback";
@@ -513,7 +514,7 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
         onRoundsChanged={() => void loadRounds()}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-11 shrink-0 items-center justify-between border-b px-4">
+        <header className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b px-4 py-1.5">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onBack}>
               <ArrowLeft className="mr-1 h-3 w-3" />
@@ -521,13 +522,14 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
             </Button>
             <span className="truncate text-sm font-semibold">{projectName}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {tree !== null && (
               <span>
                 {tree.nodes.filter((n) => n.kind === "file").length} resources
               </span>
             )}
             <Badge variant="outline">local · single-user</Badge>
+            <ProviderSelector projectId={projectId} />
           </div>
         </header>
         {roundForHeader !== null && (

@@ -28,6 +28,32 @@ describe("api client request mapping", () => {
     ]);
   });
 
+  it("updates the project provider via PUT and surfaces ai_provider on project payloads", async () => {
+    const { calls } = stubFetch((call) => {
+      if (call.url.endsWith("/provider")) {
+        expect(call.body).toEqual({ provider: "vertex" });
+        return ok({ id: 1, name: "essays", ai_provider: "vertex", created_at: iso, updated_at: iso });
+      }
+      return ok({
+        id: 1,
+        name: "essays",
+        ai_provider: "deepseek",
+        resource_count: 0,
+        round_count: 0,
+        created_at: iso,
+        updated_at: iso,
+      });
+    });
+    const updated = await api.updateProjectProvider(1, "vertex");
+    expect(updated.ai_provider).toBe("vertex");
+    const detail = await api.getProject(1);
+    expect(detail.ai_provider).toBe("deepseek");
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "PUT /api/v1/projects/1/provider",
+      "GET /api/v1/projects/1",
+    ]);
+  });
+
   it("imports a tree and fetches the tree", async () => {
     const { calls } = stubFetch((call) => {
       if (call.url.endsWith("/import")) {

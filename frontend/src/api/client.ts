@@ -1,4 +1,5 @@
 import type {
+  AiProvider,
   AnnotationOut,
   CritiqueOut,
   DumpEntryIn,
@@ -87,6 +88,13 @@ export const api = {
 
   async deleteProject(projectId: number): Promise<void> {
     return request<void>(`${BASE}/projects/${projectId}`, { method: "DELETE" });
+  },
+
+  async updateProjectProvider(projectId: number, provider: AiProvider): Promise<ProjectOut> {
+    return request<ProjectOut>(`${BASE}/projects/${projectId}/provider`, {
+      method: "PUT",
+      body: { provider },
+    });
   },
 
   async importTree(projectId: number, path: string): Promise<ImportResult> {
