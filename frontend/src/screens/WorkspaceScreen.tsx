@@ -570,7 +570,7 @@ export default function WorkspaceScreen({ projectId, projectName, onBack }: Work
                   <div className="p-5">
                     <EmptyHint>
                       {tree !== null && tree.nodes.length === 0
-                        ? "This project has no resources. Use Import in the left panel to snapshot a local Markdown tree."
+                        ? "This project has no resources. Use Import in the left panel to upload Markdown files from your browser."
                         : "Select a resource from the tree to read it. Resources are read-only — annotate instead of editing."}
                     </EmptyHint>
                   </div>

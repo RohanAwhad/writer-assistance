@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { api, ApiError } from "../../api/client";
 import type { RoundSummary, TreeNodeOut, TreeOut } from "../../api/types";
 import { Badge } from "../../components/ui/badge";
@@ -84,9 +84,10 @@ export default function LeftSidebar({
   const hasDocs = files.some((f) => f.node.kind === "file");
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
-  const [importPath, setImportPath] = useState("");
+  const [importFiles, setImportFiles] = useState<File[]>([]);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [roundOpen, setRoundOpen] = useState(false);
   const [roundName, setRoundName] = useState("");
   const [selectedDocs, setSelectedDocs] = useState<Set<number>>(new Set());
@@ -104,16 +105,30 @@ export default function LeftSidebar({
     [tree],
   );
 
+  const closeImportDialog = (): void => {
+    if (importing) return;
+    setImportOpen(false);
+    setImportFiles([]);
+    setImportError(null);
+  };
+
+  const onImportFilesPicked = (event: ChangeEvent<HTMLInputElement>): void => {
+    setImportError(null);
+    const picked = event.target.files;
+    setImportFiles(picked !== null ? Array.from(picked) : []);
+    event.target.value = "";
+  };
+
   const handleImport = async (): Promise<void> => {
+    if (importFiles.length === 0) return;
     setImportError(null);
     setImporting(true);
     try {
-      const result = await api.importTree(projectId, importPath.trim());
+      await api.uploadMarkdown(projectId, importFiles);
       setImportOpen(false);
-      setImportPath("");
+      setImportFiles([]);
       setImportError(null);
       onTreeChanged();
-      void result;
     } catch (err) {
       setImportError(err instanceof ApiError ? err.detail : (err as Error).message);
     } finally {
@@ -175,10 +190,11 @@ export default function LeftSidebar({
         {tree !== null && resourceCount === 0 && (
           <div className="space-y-3 px-1 py-2">
             <EmptyHint>
-              No resources imported yet. This project starts empty — import a local Markdown tree to begin.
+              No resources imported yet. This project starts empty — upload Markdown files from your browser to
+              begin.
             </EmptyHint>
             <Button size="sm" onClick={() => setImportOpen(true)}>
-              Import Markdown tree
+              Import Markdown files
             </Button>
           </div>
         )}
@@ -282,36 +298,53 @@ export default function LeftSidebar({
         </ul>
       </div>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <Dialog open={importOpen} onOpenChange={(open) => { if (!open) closeImportDialog(); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import Markdown tree</DialogTitle>
+            <DialogTitle>Import Markdown files</DialogTitle>
             <DialogDescription>
-              Enter an absolute path of a local directory of Markdown files. The tree is snapshotted into app
+              Upload Markdown files from your browser (.md or .markdown). They are snapshotted into app
               storage once; resources become read-only here.
             </DialogDescription>
           </DialogHeader>
           {importError !== null && <InlineError message={importError} />}
-          <div className="space-y-1.5">
-            <Label htmlFor="import-path">Absolute path</Label>
-            <Input
-              id="import-path"
-              placeholder="/home/you/writing/docs"
-              value={importPath}
-              onChange={(e) => setImportPath(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleImport();
-              }}
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              data-testid="import-file-input"
+              type="file"
+              accept=".md,.markdown"
+              multiple
+              className="hidden"
+              onChange={onImportFilesPicked}
             />
+            <Button
+              variant="outline"
+              disabled={importing}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Choose files…
+            </Button>
+            {importFiles.length > 0 && (
+              <div className="rounded-md border px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {importFiles.length} file{importFiles.length === 1 ? "" : "s"} selected
+                </p>
+                <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                  {importFiles.map((file, index) => (
+                    <li key={`${file.name}-${index}`} className="truncate font-mono">
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)}>
+            <Button variant="outline" disabled={importing} onClick={closeImportDialog}>
               Cancel
             </Button>
-            <Button
-              disabled={importPath.trim().length === 0 || importing}
-              onClick={() => void handleImport()}
-            >
+            <Button disabled={importFiles.length === 0 || importing} onClick={() => void handleImport()}>
               {importing ? "Importing…" : "Import"}
             </Button>
           </DialogFooter>
@@ -339,7 +372,7 @@ export default function LeftSidebar({
           </div>
           <Separator />
           <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-            {docFiles.length === 0 && <EmptyHint>No resources to pick — import a tree first.</EmptyHint>}
+            {docFiles.length === 0 && <EmptyHint>No resources to pick — import Markdown files first.</EmptyHint>}
             {docFiles.map((doc) => (
               <label
                 key={doc.id}

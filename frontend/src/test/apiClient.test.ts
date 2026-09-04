@@ -54,11 +54,17 @@ describe("api client request mapping", () => {
     ]);
   });
 
-  it("imports a tree and fetches the tree", async () => {
+  it("uploads markdown files as a multipart import and fetches the tree", async () => {
+    const fileA = new File(["# a"], "a.md", { type: "text/markdown" });
+    const fileB = new File(["# b"], "b.markdown", { type: "text/markdown" });
     const { calls } = stubFetch((call) => {
       if (call.url.endsWith("/import")) {
-        expect(call.body).toEqual({ path: "/tmp/docs" });
-        return created({ project_id: 1, imported_files: 3 });
+        expect(call.method).toBe("POST");
+        expect(call.body).toBeInstanceOf(FormData);
+        const form = call.body as FormData;
+        expect(form.getAll("files").map((f) => (f as File).name)).toEqual(["a.md", "b.markdown"]);
+        expect(call.headers).toEqual({ Accept: "application/json" });
+        return created({ project_id: 1, imported_files: 2 });
       }
       return ok({
         project_id: 1,
@@ -68,11 +74,28 @@ describe("api client request mapping", () => {
         ],
       });
     });
-    const imported = await api.importTree(1, "/tmp/docs");
-    expect(imported.imported_files).toBe(3);
+    const imported = await api.uploadMarkdown(1, [fileA, fileB]);
+    expect(imported.imported_files).toBe(2);
     const tree = await api.getTree(1);
     expect(tree.nodes.filter((n) => n.kind === "file").map((n) => n.path)).toEqual(["a.md"]);
     expect(calls[1]?.url).toBe("/api/v1/projects/1/tree");
+  });
+
+  it("surfaces import rejections through ApiError with the server detail", async () => {
+    const fileA = new File(["# a"], "a.md", { type: "text/markdown" });
+    stubFetch((call) => {
+      if (call.url.endsWith("/import")) {
+        return error(400, "b.txt is not a Markdown file");
+      }
+      return ok({});
+    });
+    const err = await api.uploadMarkdown(1, [fileA]).then(
+      () => null,
+      (e: unknown) => e as ApiError,
+    );
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err?.status).toBe(400);
+    expect(err?.detail).toBe("b.txt is not a Markdown file");
   });
 
   it("creates a highlight and a note with the offset contract", async () => {
@@ -283,5 +306,14 @@ describe("401 handling navigates to the login page (R-075)", () => {
     stubFetch(() => error(401, "authentication required"));
     await expect(api.listProjects()).rejects.toBeInstanceOf(ApiError);
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("navigates to /login when an upload returns 401 (same gate as any data call)", async () => {
+    const assign = stubLocation("/workspace");
+    stubFetch(() => error(401, "authentication required"));
+    const fileA = new File(["# a"], "a.md", { type: "text/markdown" });
+    await expect(api.uploadMarkdown(1, [fileA])).rejects.toBeInstanceOf(ApiError);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledWith("/login");
   });
 });

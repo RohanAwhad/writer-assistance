@@ -80,7 +80,7 @@ export default function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Writer Assistant</h1>
-          <p className="text-sm text-muted-foreground">Projects — each holds a read-only Markdown tree you read and annotate.</p>
+          <p className="text-sm text-muted-foreground">Projects — each holds read-only Markdown resources you read and annotate.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>New project</Button>
       </div>
@@ -88,7 +88,7 @@ export default function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
       {error !== null && <InlineError message={error} />}
       {projects === null && error === null && <EmptyHint>Loading projects…</EmptyHint>}
       {projects !== null && projects.length === 0 && (
-        <EmptyHint>No projects yet. Create one, then import a local Markdown tree inside it.</EmptyHint>
+        <EmptyHint>No projects yet. Create one, then upload Markdown files into it.</EmptyHint>
       )}
       <div className="mt-4 flex flex-col gap-3">
         {projects?.map((project) => (
@@ -116,7 +116,7 @@ export default function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
           <DialogHeader>
             <DialogTitle>New project</DialogTitle>
             <DialogDescription>
-              Create the project; resources are imported in the workspace by pointing at a local Markdown tree.
+              Create the project; resources are added later in the workspace by uploading Markdown files.
             </DialogDescription>
           </DialogHeader>
           {createError !== null && <InlineError message={createError} />}
@@ -146,7 +146,7 @@ export default function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
             <DialogTitle>Delete project</DialogTitle>
             <DialogDescription>
               This permanently deletes project <Badge variant="secondary">{deleteTarget?.name}</Badge> — its
-              imported resources, annotations, rounds, dumps and reports. Files on disk are untouched.
+              imported resources, annotations, rounds, dumps and reports. Nothing on your computer is changed.
             </DialogDescription>
           </DialogHeader>
           {deleteError !== null && <InlineError message={deleteError} />}

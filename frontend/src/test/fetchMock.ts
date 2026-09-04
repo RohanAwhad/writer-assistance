@@ -4,6 +4,7 @@ export interface FetchCall {
   url: string;
   method: string;
   body: unknown;
+  headers?: HeadersInit;
 }
 
 export interface StubResponse {
@@ -12,7 +13,7 @@ export interface StubResponse {
   text?: string;
 }
 
-type Handler = (call: FetchCall, index: number) => StubResponse;
+type Handler = (call: FetchCall, index: number) => StubResponse | Promise<StubResponse>;
 
 export function stubFetch(handler: Handler): { calls: FetchCall[] } {
   const calls: FetchCall[] = [];
@@ -26,10 +27,12 @@ export function stubFetch(handler: Handler): { calls: FetchCall[] } {
       } catch {
         body = init.body;
       }
+    } else if (init?.body instanceof FormData) {
+      body = init.body;
     }
-    const call: FetchCall = { url, method, body };
+    const call: FetchCall = { url, method, body, headers: init?.headers };
     calls.push(call);
-    const response = handler(call, calls.length - 1);
+    const response = await handler(call, calls.length - 1);
     const status = response.status ?? 200;
     if (response.text !== undefined) {
       return new Response(response.text, {

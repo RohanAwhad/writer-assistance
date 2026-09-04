@@ -55,6 +55,18 @@ function navigateToLoginOnUnauthorized(): void {
   }
 }
 
+async function responseFailure(response: Response): Promise<ApiError> {
+  const payload: unknown = await response.json().catch(() => null);
+  const detail =
+    isRecord(payload) && typeof payload.detail === "string"
+      ? payload.detail
+      : `request failed with status ${response.status}`;
+  if (response.status === 401) {
+    navigateToLoginOnUnauthorized();
+  }
+  return new ApiError(response.status, detail);
+}
+
 async function request<T>(path: string, options: RequestOptions): Promise<T> {
   const init: RequestInit = {
     method: options.method,
@@ -108,11 +120,22 @@ export const api = {
     });
   },
 
-  async importTree(projectId: number, path: string): Promise<ImportResult> {
-    return request<ImportResult>(`${BASE}/projects/${projectId}/import`, {
+  async uploadMarkdown(projectId: number, files: File[] | FileList): Promise<ImportResult> {
+    const formData = new FormData();
+    for (const file of Array.from(files)) {
+      formData.append("files", file);
+    }
+    // R-079: multipart upload — the browser sets the Content-Type with the
+    // boundary; a manual header would break the body framing.
+    const response = await fetch(`${BASE}/projects/${projectId}/import`, {
       method: "POST",
-      body: { path },
+      headers: { Accept: "application/json" },
+      body: formData,
     });
+    if (!response.ok) {
+      throw await responseFailure(response);
+    }
+    return (await response.json()) as ImportResult;
   },
 
   async getTree(projectId: number): Promise<TreeOut> {
@@ -257,15 +280,7 @@ export const api = {
       headers: { Accept: "text/markdown" },
     });
     if (!response.ok) {
-      const payload: unknown = await response.json().catch(() => null);
-      const detail =
-        isRecord(payload) && typeof payload.detail === "string"
-          ? payload.detail
-          : `request failed with status ${response.status}`;
-      if (response.status === 401) {
-        navigateToLoginOnUnauthorized();
-      }
-      throw new ApiError(response.status, detail);
+      throw await responseFailure(response);
     }
     return response.text();
   },
