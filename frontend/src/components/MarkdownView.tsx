@@ -1,4 +1,4 @@
-import { createElement, useMemo, useRef } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   clipMarksToSpans,
@@ -168,7 +168,7 @@ export default function MarkdownView({ docText, markRanges, onSelection }: MarkV
     return null;
   };
 
-  const handleSelectionChange = (): void => {
+  const handleSelectionChange = useCallback((): void => {
     if (onSelection === undefined) return;
     const sel = window.getSelection();
     if (sel === null || sel.rangeCount === 0 || sel.isCollapsed) {
@@ -204,7 +204,7 @@ export default function MarkdownView({ docText, markRanges, onSelection }: MarkV
         message: err instanceof Error ? err.message : "could not map the selection",
       });
     }
-  };
+  }, [doc, onSelection]);
 
   const clearSelection = (): void => {
     const sel = window.getSelection();
@@ -213,6 +213,30 @@ export default function MarkdownView({ docText, markRanges, onSelection }: MarkV
       onSelection({ status: "empty", text: "", start: null, end: null, message: null });
     }
   };
+
+  // INT-009 (SD-33/R-085): selection plumbing for touch devices. Native
+  // touch-created selections (long-press / drag on iOS-Android) do not raise
+  // mouseup reliably, so the doc also reacts to `selectionchange` on coarse
+  // pointers; mouse/keyboard behavior is unchanged (desktop: hover != none).
+  // The listener is gated to non-collapsed, in-doc selections only: page-wide
+  // collapses (tap-away) and caret/selection activity inside the note composer
+  // textarea must not emit empty and drop the anchored-note anchor (F-m9-2-1).
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    if (!window.matchMedia("(hover: none)").matches) return;
+    const onChange = (): void => {
+      const sel = window.getSelection();
+      if (sel === null || sel.rangeCount === 0 || sel.isCollapsed) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+      const startNode = sel.getRangeAt(0).startContainer;
+      const anchor = startNode instanceof Element ? startNode : startNode.parentElement;
+      if (anchor === null || containerRef.current === null || !containerRef.current.contains(anchor)) return;
+      handleSelectionChange();
+    };
+    document.addEventListener("selectionchange", onChange);
+    return () => document.removeEventListener("selectionchange", onChange);
+  }, [handleSelectionChange]);
 
   const renderBlock = (blockIndex: number): ReactNode => {
     const block = doc.blocks[blockIndex]!;

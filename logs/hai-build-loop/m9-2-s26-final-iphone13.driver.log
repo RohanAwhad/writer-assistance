@@ -1,0 +1,33 @@
+== iPhone 13 (390x844, DPR 3, hasTouch) ==
+PASS gate-on login shown
+PASS projects list after login
+PASS touch ctx (hover:none) true
+PASS doc rendered
+CDP long-press selection: "" (headless cannot produce native selection, as prior run)
+PASS range selection set on sentence 1 | {"sample":"The quick brown fox jumps over the lazy ","collapsed":false}
+PASS panel popped with selection quote (a) | Selection: “The quick brown fox jumps over the lazy dog.”
+PASS highlight POST 201 (b) | status 201
+PASS highlight payload anchor s1 (b) | {"start_offset":13,"end_offset":57,"content":"The quick brown fox jumps over the lazy dog."}
+PASS read-back: highlight anchored 13-57 | [{"id":1,"doc_id":1,"kind":"highlight","start_offset":13,"end_offset":57,"content":"The quick brown fox jumps over the lazy dog.","created_at":"2026-09-04T17:35:12.162804Z","updated_at":"2026-09-04T17:35:12.162804Z"}]
+PASS range selection set on sentence 2 (c) | {"sample":"The dog sleeps under the warm sun. A fin","collapsed":false}
+PASS panel popped with sentence 2 | Selection: “The dog sleeps under the warm sun.”
+PASS composer opened, textarea focused | TEXTAREA
+PASS guard trigger emitted (collapsed + textarea active) | {"active":"TEXTAREA","collapsed":true}
+PASS note POST 201 (c) | status 201
+PASS note payload anchor s2 (c) — anchor NOT lost | {"content":"Final-round focused composer note.","start_offset":59,"end_offset":93}
+PASS note payload content | {"content":"Final-round focused composer note.","start_offset":59,"end_offset":93}
+PASS read-back: note anchored 59-93 | [{"id":1,"doc_id":1,"kind":"highlight","start_offset":13,"end_offset":57,"content":"The quick brown fox jumps over the lazy dog.","created_at":"2026-09-04T17:35:12.162804Z","updated_at":"2026-09-04T17:35:12.162804Z"},{"id":2,"doc_id":1,"kind":"note","start_offset":59,"end_offset":93,"content":"Final-round focused composer note.","created_at":"2026-09-04T17:35:13.862941Z","updated_at":"2026-09-04T17:35:13.862941Z"}]
+PASS annotation row renders anchored + snippet
+console errors/warnings: 0
+pageerrors: 0
+resp 5xx: 0
+== iPad rotation leg (768x1024 -> 1194x834 -> 768x1024) ==
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+page.setViewportSize: viewportSize.width: expected integer, got undefined
+    at ipadLeg (/tmp/opencode/m9-2-s26-final/drivers/touch.mjs:264:16)
+    at async file:///tmp/opencode/m9-2-s26-final/drivers/touch.mjs:281:1
+
+Node.js v22.17.1

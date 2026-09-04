@@ -460,3 +460,31 @@
   tap-target sizing) — residual, owner: human.
 - Commits: f2cf726 spec v2.0; a33e4ad m9-1; 2127928 m9-2. INT-009 complete
   (pending step-26 human leg + push).
+
+## 2026-09-04 — INT-009 M3: step-26 emulated device suite + SD-33 touch selection plumbing
+
+- Device-test agent: 6 emulated contexts (iPhone 13 390x844, SE 360x800, iPad
+  768x1024, iPad Pro 11 834x1194 + 1194x834, desktop 1280) touched the whole
+  core path: 11 surfaces x 6 contexts — ZERO page-level h-scroll, zero
+  off-viewport controls, delete-annotation opacity 1 (hover:none) on touch,
+  rotation 768->1194->768 0-navigations, tier mapping exact (834=tablet,
+  1194=desktop). 51 screenshots (logs/hai-build-loop/screens/m9-2-s26-*, untracked
+  per convention).
+- F-s26-1 (WARN): headless Chromium never produces the native long-press
+  gesture (CDP long-press -> getSelection ""). Per SD-33 contingency added
+  touch-gated `selectionchange` plumbing to MarkdownView.tsx (+15/-3):
+  listener only when matchMedia("(hover: none)") matches; desktop mouse path
+  byte-identical (onMouseUp/onKeyUp untouched).
+- F-1 (WARN, review): page-wide selectionchange resets selection when the
+  note composer textarea is focused -> unanchored-note risk (live-selection
+  read at submit). Fixed: skip collapsed / activeElement input|textarea /
+  anchor outside doc container. Final review PASS, proven emulated:
+  select sentence -> Note on selection -> FOCUS composer -> type -> Save ->
+  POST /notes 201 with original anchors (59-93); Highlight 201 earlier (13-57).
+- NITs carried: tap targets <40px (SD-33 tunable at device leg), iPad Pro 1194
+  curate grid child +26px scrollWidth (overflow-x-hidden, no artifact),
+  truncating round-stage name (intentional ellipsis), harness blob-download.
+- Evidence: logs/hai-build-loop/m9-2-step26-emulated.md + m9-2-s26-*.log.
+- Residual human legs (step 26, owner: human): native long-press/magnifier on
+  real iOS/Android, on-screen keyboard, physical rotation, tunnel/https on
+  real phone/iPad, tap-target feel vs <40px buttons.
