@@ -312,3 +312,18 @@
   code 302 → /login per F14/UC-20) — §6 amended at this boundary; NITs M1F-2
   (gate-off+dist GET /login → SPA index, combo never in deployment), M1F-3
   (conftest gains fallback when dist exists — harmless, prefix-guarded) accepted.
+
+## 2026-09-03 — INT-006 M2: container packaging (build loop)
+
+- Dockerfile (multi-stage node:24-slim build → python:3.13-slim runtime; uv
+  0.11.16 pinned from ghcr; uv sync --frozen --no-dev; non-root uid 1000;
+  layout /app/backend + /app/frontend/dist so the static default resolves
+  in-image; ENV WRITER_ASSISTANCE_DB=/data/writer-assistance.db; EXPOSE 8000;
+  fail-closed CMD per R-078/SD-24 — AUTH_API_KEY unset → exit 1 before uvicorn).
+- .dockerignore: .env/data/node_modules/dist/logs/.git/.hai + caches. No compose.
+- Reviewer-owned offline smoke (build + run, no live AI): (a) 401 JSON /api,
+  302 /login, wrong key 401 no cookie, login → wa_session, SPA 200, fresh DB on
+  /data volume; (b) key-less boot exits 1, port refused, volume untouched;
+  (c) project + session survive restart. Reviewer PASS, NITs only (CMD one-line
+  vs SD-24 "two-line" phrasing; floating base tags; warm-cache assumption).
+- Cleanup confirmed: containers/volume/image removed.

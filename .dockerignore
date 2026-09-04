@@ -1,0 +1,39 @@
+# INT-006 (R-077): build-context exclusions. Secrets and dev state never enter
+# the context; dist and node_modules are built in-stage.
+.git
+.hai
+**/.hai
+
+# secrets / runtime env (ASM-014)
+.env
+**/.env
+*.local
+
+# databases — the container DB lives on a named volume (DEC-023)
+**/data
+*.db
+
+# deps and build outputs (rebuilt in-stage)
+**/node_modules
+node_modules
+**/dist
+dist
+.venv
+**/.venv
+
+# caches and logs
+**/__pycache__
+__pycache__
+*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+logs
+**/logs
+
+# scratch/play artifacts
+play.py
+play.py.output
+play.ipynb
+**/play.py
+.DS_Store
