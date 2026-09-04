@@ -1,12 +1,12 @@
-"""Project lifecycle and resource-tree import (F1, R-010, OQ-01).
+"""Project lifecycle and resource import (F1, R-010, R-079..R-081, OQ-01).
 
-Import snapshots the Markdown tree into SQLite once; after that the app never
-reads the import path again (read-only invariant R-011/R-012).
+Import snapshots browser-uploaded Markdown files into SQLite once; uploads land
+flat at the project root (SD-28) and the snapshot is immutable (read-only
+invariant R-011/R-012). The backend never reads a server filesystem path to
+import resources (R-079).
 """
 
-import os
 import sqlite3
-from pathlib import Path
 
 from app.db import fetch_one, iter_rows, now_utc
 from app.errors import BadRequestError, ConflictError, NotFoundError
@@ -134,85 +134,67 @@ def delete_project(conn: sqlite3.Connection, project_id: int) -> None:
     conn.commit()
 
 
-def _collect_markdown_files(root: Path) -> list[Path]:
-    """Markdown files under root; dot-entries and non-.md files are skipped."""
-    found: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        for filename in sorted(filenames):
-            if filename.startswith(".") or not filename.lower().endswith(".md"):
-                continue
-            found.append(Path(dirpath) / filename)
-    return found
+_MARKDOWN_EXTENSIONS = (".md", ".markdown")
 
 
-def _insert_dir_chain(
-    conn: sqlite3.Connection,
-    project_id: int,
-    project_root: Path,
-    file_path: Path,
-) -> int | None:
-    """Insert resource_nodes rows for each ancestor directory of a file path.
+def _check_upload_name(name: str) -> None:
+    """Per-part name grammar (SD-30): .md/.markdown, plain basename.
 
-    Returns the id of the innermost (file-parent) directory node, or None for
-    files directly under the project root.
+    A failing name raises BadRequestError naming the offending file, rejecting
+    the whole request (all-or-nothing).
     """
-    parent_id: int | None = None
-    relative = file_path.parent.relative_to(project_root)
-    parts = relative.parts
-    for index, part in enumerate(parts):
-        rel_path = str(Path(*parts[: index + 1]))
-        row = conn.execute(
-            "SELECT id FROM resource_nodes WHERE project_id = ? AND path = ?",
-            (project_id, rel_path),
-        ).fetchone()
-        if row is None:
-            inserted = conn.execute(
-                """INSERT INTO resource_nodes (project_id, parent_id, name, path, is_dir)
-                   VALUES (?, ?, ?, ?, 1) RETURNING id""",
-                (project_id, parent_id, part, rel_path),
-            ).fetchone()
-            if inserted is None:
-                raise RuntimeError("directory node insert returned no row")
-            parent_id = int(inserted["id"])
-        else:
-            parent_id = int(row["id"])
-    return parent_id
+    lowered = name.lower()
+    if not lowered.endswith(_MARKDOWN_EXTENSIONS):
+        raise BadRequestError(f"unsupported file type: {name}")
+    if "/" in name or "\\" in name:
+        raise BadRequestError(f"file name must not contain path separators: {name}")
+    if name.startswith("."):
+        raise BadRequestError(f"file name must not start with a dot: {name}")
 
 
-def import_tree(conn: sqlite3.Connection, project_id: int, import_path: str) -> ImportResult:
+def import_uploads(
+    conn: sqlite3.Connection, project_id: int, uploads: list[tuple[str, bytes]]
+) -> ImportResult:
+    """Snapshot accepted browser-uploaded files into the project (R-079..R-081).
+
+    Each part is (filename, raw bytes) as received from the multipart body.
+    Every part must pass the SD-30 grammar before anything is written; on any
+    failure nothing persists. Accepted files are stored byte-for-byte (decoded
+    as UTF-8) as file nodes with ``path == filename`` at the project root
+    (SD-28), flat — no directory nodes are created.
+    """
     _require_project_row(conn, project_id)
-    root = Path(import_path)
-    if not root.is_dir():
-        raise BadRequestError(f"import path is not a directory: {import_path}")
     existing = conn.execute(
         "SELECT COUNT(*) AS n FROM resource_nodes WHERE project_id = ? AND is_dir = 0",
         (project_id,),
     ).fetchone()
     if existing is not None and int(existing["n"]) > 0:
         raise ConflictError("project already has imported resources")
-    files = _collect_markdown_files(root)
-    if not files:
-        raise BadRequestError(f"no Markdown files found under {import_path}")
+    decoded: list[tuple[str, str]] = []
+    for name, raw in uploads:
+        _check_upload_name(name)
+        try:
+            content = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            raise BadRequestError(f"file is not valid UTF-8: {name}") from None
+        if any(existing_name == name for existing_name, _ in decoded):
+            raise ConflictError(f"duplicate file name in import: {name}")
+        decoded.append((name, content))
     ts = now_utc()
-    for file_path in files:
-        parent_id = _insert_dir_chain(conn, project_id, root, file_path)
-        rel_path = file_path.relative_to(root).as_posix()
-        content = file_path.read_text(encoding="utf-8")
+    for name, content in decoded:
         inserted = conn.execute(
             """INSERT INTO resource_nodes (project_id, parent_id, name, path, is_dir)
-               VALUES (?, ?, ?, ?, 0) RETURNING id""",
-            (project_id, parent_id, file_path.name, rel_path),
+               VALUES (?, NULL, ?, ?, 0) RETURNING id""",
+            (project_id, name, name),
         ).fetchone()
         if inserted is None:
             raise RuntimeError("file node insert returned no row")
-        node_id = int(inserted["id"])
         conn.execute(
             "INSERT INTO resource_docs (node_id, content, imported_at) VALUES (?, ?, ?)",
-            (node_id, content, ts),
+            (int(inserted["id"]), content, ts),
         )
     conn.commit()
-    return ImportResult(project_id=project_id, imported_files=len(files))
+    return ImportResult(project_id=project_id, imported_files=len(decoded))
 
 
 def get_tree(conn: sqlite3.Connection, project_id: int) -> TreeOut:

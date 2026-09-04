@@ -34,7 +34,7 @@ def test_snapshot_byte_identical_through_full_flow(
     alpha_id, beta_id, chapter_id = (
         files["alpha.md"],
         files["beta.md"],
-        files["sub/chapter.md"],
+        files["chapter.md"],
     )
     expected = {
         alpha_id: ALPHA_CONTENT,

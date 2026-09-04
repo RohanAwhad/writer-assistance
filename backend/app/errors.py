@@ -23,6 +23,12 @@ class BadRequestError(ApiError):
     status_code = 400
 
 
+class PayloadTooLargeError(ApiError):
+    """The multipart import body exceeded the upload cap (R-079, SD-29)."""
+
+    status_code = 413
+
+
 class AIError(ApiError):
     """The AI backend failed (transport, auth, or out-of-contract response)."""
 

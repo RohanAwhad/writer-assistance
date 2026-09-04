@@ -38,10 +38,6 @@ class ProjectDetail(ProjectOut):
     round_count: int
 
 
-class ImportRequest(BaseModel):
-    path: str
-
-
 class ImportResult(BaseModel):
     project_id: ProjectId
     imported_files: int

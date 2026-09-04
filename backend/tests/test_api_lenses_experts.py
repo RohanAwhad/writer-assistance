@@ -56,7 +56,7 @@ def test_lens_proposal_lifecycle(client: TestClient, sample_tree: Path) -> None:
 
 def test_expert_run_and_note_review_flow(client: TestClient, sample_tree: Path) -> None:
     project_id, files = imported_project(client, sample_tree)
-    round_id = make_round(client, project_id, [files["alpha.md"], files["sub/chapter.md"]])
+    round_id = make_round(client, project_id, [files["alpha.md"], files["chapter.md"]])
     alpha_id = files["alpha.md"]
 
     response = client.post(f"/api/v1/resources/{alpha_id}/lens-proposals", json={})
@@ -115,7 +115,7 @@ def test_expert_run_and_note_review_flow(client: TestClient, sample_tree: Path) 
 def test_expert_run_gates(client: TestClient, sample_tree: Path) -> None:
     project_id, files = imported_project(client, sample_tree)
     alpha_id = files["alpha.md"]
-    chapter_id = files["sub/chapter.md"]
+    chapter_id = files["chapter.md"]
     round_id = make_round(client, project_id, [alpha_id, chapter_id])
 
     proposals = client.post(f"/api/v1/resources/{alpha_id}/lens-proposals", json={}).json()

@@ -24,6 +24,7 @@ load_dotenv(override=True)
 DEFAULT_DB_PATH = "data/writer-assistance.db"
 ENV_DB_PATH = "WRITER_ASSISTANCE_DB"
 ENV_AUTH_KEY = "AUTH_API_KEY"
+IMPORT_CAP_BYTES = 10 * 1024 * 1024
 _SPA_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 _SPA_FALLBACK_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -85,6 +86,7 @@ def create_app(
     *,
     auth_key: str | None = None,
     static_dir: str | Path | None = None,
+    import_cap_bytes: int = IMPORT_CAP_BYTES,
 ) -> FastAPI:
     resolved = _resolve_db_path(db_path)
     resolved_static = _resolve_static_dir(static_dir)
@@ -101,6 +103,7 @@ def create_app(
 
     app = FastAPI(title="writer-assistance backend", lifespan=lifespan)
     app.state.writer_db_path = resolved
+    app.state.import_cap_bytes = import_cap_bytes
     app.include_router(projects.router, prefix="/api/v1")
     app.include_router(rounds.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")

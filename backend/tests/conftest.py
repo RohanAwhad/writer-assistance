@@ -96,17 +96,12 @@ class Harness(NamedTuple):
 
 @pytest.fixture
 def sample_tree(tmp_path: Path) -> Path:
+    """Flat tree of uploadable Markdown files (uploads land flat, SD-28)."""
     root = tmp_path / "library"
     root.mkdir()
     (root / "alpha.md").write_text(ALPHA_CONTENT, encoding="utf-8")
     (root / "beta.md").write_text(BETA_CONTENT, encoding="utf-8")
-    (root / "sub").mkdir()
-    (root / "sub" / "chapter.md").write_text(CHAPTER_CONTENT, encoding="utf-8")
-    (root / "sub" / "ignore.txt").write_text("not markdown", encoding="utf-8")
-    (root / ".hidden.md").write_text("hidden", encoding="utf-8")
-    (root / ".dotdir").mkdir()
-    (root / ".dotdir" / "inside.md").write_text("hidden dir", encoding="utf-8")
-    (root / "emptydir").mkdir()
+    (root / "chapter.md").write_text(CHAPTER_CONTENT, encoding="utf-8")
     return root
 
 
@@ -133,11 +128,19 @@ def client(harness: Harness) -> Iterator[TestClient]:
 def imported_project(
     client: TestClient, root: Path, name: str = "Project"
 ) -> tuple[int, dict[str, int]]:
-    """Create a project, import the tree, return (project_id, path -> node id)."""
+    """Create a project, upload root's Markdown files, return (project_id, path -> node id).
+
+    Upload path (R-079): every root-level .md file goes up as one multipart
+    ``files`` part; node paths equal file names (flat placement, SD-28).
+    """
     response = client.post("/api/v1/projects", json={"name": name})
     assert response.status_code == 201, response.text
     project_id = int(response.json()["id"])
-    response = client.post(f"/api/v1/projects/{project_id}/import", json={"path": str(root)})
+    parts = [
+        ("files", (path.name, path.read_bytes(), "text/markdown"))
+        for path in sorted(root.glob("*.md"))
+    ]
+    response = client.post(f"/api/v1/projects/{project_id}/import", files=parts)
     assert response.status_code == 201, response.text
     tree = client.get(f"/api/v1/projects/{project_id}/tree").json()["nodes"]
     files = {node["path"]: int(node["id"]) for node in tree if node["kind"] == "file"}

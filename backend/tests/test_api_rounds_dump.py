@@ -15,7 +15,7 @@ from tests.conftest import (
 
 def test_round_creation_and_doc_set(client: TestClient, sample_tree: Path) -> None:
     project_id, files = imported_project(client, sample_tree)
-    alpha_id, chapter_id = files["alpha.md"], files["sub/chapter.md"]
+    alpha_id, chapter_id = files["alpha.md"], files["chapter.md"]
     response = client.post(
         "/api/v1/rounds",
         json={"project_id": project_id, "doc_ids": [chapter_id, alpha_id]},
@@ -28,7 +28,7 @@ def test_round_creation_and_doc_set(client: TestClient, sample_tree: Path) -> No
     detail = client.get(f"/api/v1/rounds/{round_id}")
     assert detail.status_code == 200
     assert [doc["path"] for doc in detail.json()["docs"]] == [
-        "sub/chapter.md",
+        "chapter.md",
         "alpha.md",
     ]
     assert detail.json()["dump_id"] is None
