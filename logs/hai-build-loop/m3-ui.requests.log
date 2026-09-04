@@ -1,0 +1,140 @@
+[02:30:06] === UI SESSION: view-mode regression (A), step 15 selector (B/C/A), deepseek UI call (C) ===
+[02:30:07] U1 open Projects list: heading visible
+[02:30:07] U1 fresh project C via UI: selector value = deepseek (expected deepseek)
+[02:30:07] U1 imported fixture tree via UI dialog into C
+[02:30:07] U2 existing untouched project B: selector value = deepseek (expected deepseek)
+[02:30:07] U2 existing journey project A: selector value = vertex (expected vertex — persisted from step 1 API switch)
+[02:30:08] U3 C switched to vertex: vertex
+[02:30:56] === UI SESSION: view-mode regression (A), step 15 selector (B/C/A), deepseek UI call (C) ===
+[02:30:56] U0 Projects list: heading visible
+[02:30:57] pre-clean: deleted existing project "M3 UI Fresh DeepSeek C"
+[02:30:57] U1 fresh project C via UI: selector value = deepseek (expected deepseek)
+[02:30:57] U1 imported fixture tree via UI dialog into C
+[02:30:57] U2 existing untouched project B: selector value = deepseek (expected deepseek)
+[02:30:58] U2 existing journey project A: selector value = vertex (expected vertex — persisted from step 1 API switch)
+[02:30:59] U3 C switched to vertex: vertex
+[02:30:59] U3 C after reload: vertex (expected vertex — persisted, R-071)
+[02:31:00] U3 C switched back to deepseek: deepseek
+[02:31:01] U3 C after reload: deepseek (expected deepseek)
+[02:31:01] U4 A report editor open (round 2)
+[02:31:01] U4 view mode: view-blocks=3 textareas=0 toneButtons=0 critiqueButtons=0 delete=0 export=0 writesDuringToggle=0 badge=editing
+[02:31:57] === UI SESSION: view-mode regression (A), step 15 selector (B/C/A), deepseek UI call (C) ===
+[02:31:57] U0 Projects list: heading visible
+[02:31:57] pre-clean: deleted existing project "M3 UI Fresh DeepSeek C"
+[02:31:58] U1 fresh project C via UI: selector value = deepseek (expected deepseek)
+[02:31:58] U1 imported fixture tree via UI dialog into C
+[02:31:58] U2 existing untouched project B: selector value = deepseek (expected deepseek)
+[02:31:58] U2 existing journey project A: selector value = vertex (expected vertex — persisted from step 1 API switch)
+[02:31:59] U3 C switched to vertex: vertex
+[02:32:00] U3 C after reload: vertex (expected vertex — persisted, R-071)
+[02:32:01] U3 C switched back to deepseek: deepseek
+[02:32:01] U3 C after reload: deepseek (expected deepseek)
+[02:32:02] U4 A report editor open (round 2)
+[02:32:02] U4 view mode: view-blocks=3 textareas=0 toneButtons=0 critiqueButtons=0 delete=0 export=1 writesDuringToggle=0 badge=editing
+[02:32:03] U4 view shows edited text: true
+[02:32:03] U5 C provider before deepseek UI call: deepseek
+[02:32:03] U5 C round created via UI
+[02:32:03] U5 C doc rows in tree: 4
+[02:33:16] === UI SESSION: view-mode regression (A), step 15 selector (B/C/A), deepseek UI call (C) ===
+[02:33:16] U0 Projects list: heading visible
+[02:33:16] pre-clean: deleted existing project "M3 UI Fresh DeepSeek C"
+[02:33:17] U1 fresh project C via UI: selector value = deepseek (expected deepseek)
+[02:33:17] U1 imported fixture tree via UI dialog into C
+[02:33:17] U2 existing untouched project B: selector value = deepseek (expected deepseek)
+[02:33:18] U2 existing journey project A: selector value = vertex (expected vertex — persisted from step 1 API switch)
+[02:33:18] U3 C switched to vertex: vertex
+[02:33:19] U3 C after reload: vertex (expected vertex — persisted, R-071)
+[02:33:20] U3 C switched back to deepseek: deepseek
+[02:33:20] U3 C after reload: deepseek (expected deepseek)
+[02:33:21] U4 A report editor open (round 2)
+[02:33:21] U4 view mode: view-blocks=3 textareas=0 toneButtons=0 critiqueButtons=0 delete=0 export=1 writesDuringToggle=0 badge=editing
+[02:33:22] U4 view shows edited text: true
+[02:33:22] U5 C provider before deepseek UI call: deepseek
+[02:33:22] U5 C project=7 round=4 ready via API
+[02:33:22] U5 C doc rows in tree: 4
+[02:35:08] U5 proposals did not render within 120s
+[02:35:13] === UI SESSION: view-mode regression (A), step 15 selector (B/C/A), deepseek UI call (C) ===
+[02:35:13] U0 Projects list: heading visible
+[02:35:13] pre-clean: deleted existing project "M3 UI Fresh DeepSeek C"
+[02:35:14] U1 fresh project C via UI: selector value = deepseek (expected deepseek)
+[02:35:14] U1 imported fixture tree via UI dialog into C
+[02:35:14] U2 existing untouched project B: selector value = deepseek (expected deepseek)
+[02:35:14] U2 existing journey project A: selector value = vertex (expected vertex — persisted from step 1 API switch)
+[02:35:15] U3 C switched to vertex: vertex
+[02:35:16] U3 C after reload: vertex (expected vertex — persisted, R-071)
+[02:35:17] U3 C switched back to deepseek: deepseek
+[02:35:17] U3 C after reload: deepseek (expected deepseek)
+[02:35:18] U4 A report editor open (round 2)
+[02:35:18] U4 view mode: view-blocks=3 textareas=0 toneButtons=0 critiqueButtons=0 delete=0 export=1 writesDuringToggle=0 badge=editing
+[02:35:19] U4 view shows edited text: true
+[02:35:19] U5 C provider before deepseek UI call: deepseek
+[02:35:19] U5 C project=8 round=5 ready via API
+[02:35:19] U5 C doc rows in tree: 4
+[02:35:24] U5 deepseek lens UI call completed: proposals with 'proposed' badge=5
+[02:35:24] === UI SESSION DONE ===
+
+### /api request log (method url status)
+GET /src/api/client.ts 200
+GET /api/v1/projects 200
+GET /api/v1/projects 200
+DELETE /api/v1/projects/7 204
+GET /src/api/client.ts 304
+GET /api/v1/projects 200
+POST /api/v1/projects 201
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects/8 200
+GET /api/v1/rounds?project_id=8 200
+POST /api/v1/projects/8/import 201
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects 200
+GET /api/v1/projects/3 200
+GET /api/v1/projects/3/tree 200
+GET /api/v1/rounds?project_id=3 200
+GET /api/v1/projects 200
+GET /api/v1/projects/2/tree 200
+GET /api/v1/rounds?project_id=2 200
+GET /api/v1/projects/2 200
+GET /api/v1/projects 200
+GET /api/v1/projects/8 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/rounds?project_id=8 200
+PUT /api/v1/projects/8/provider 200
+GET /src/api/client.ts 304
+GET /api/v1/projects 200
+GET /api/v1/rounds?project_id=8 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects/8 200
+PUT /api/v1/projects/8/provider 200
+GET /src/api/client.ts 304
+GET /api/v1/projects 200
+GET /api/v1/rounds?project_id=8 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects/8 200
+GET /api/v1/projects 200
+GET /api/v1/projects/2 200
+GET /api/v1/rounds?project_id=2 200
+GET /api/v1/projects/2/tree 200
+GET /api/v1/rounds/2 200
+GET /api/v1/reports/2 200
+PUT /api/v1/blocks/5 200
+GET /api/v1/projects 200
+GET /api/v1/rounds?project_id=8 200
+GET /api/v1/projects/8 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/rounds?project_id=8 200
+POST /api/v1/rounds 201
+GET /api/v1/projects 200
+GET /api/v1/projects/8/tree 200
+GET /api/v1/projects/8 200
+GET /api/v1/rounds?project_id=8 200
+GET /api/v1/rounds/5 200
+GET /api/v1/resources/26 200
+GET /api/v1/resources/26/annotations 200
+GET /api/v1/rounds/5/expert-runs 200
+GET /api/v1/resources/26/lens-proposals 200
+POST /api/v1/resources/26/lens-proposals 201
+GET /api/v1/resources/26/lens-proposals 200
+
+### console errors/warnings

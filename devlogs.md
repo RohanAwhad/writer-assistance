@@ -255,3 +255,26 @@
   assert 502 responses naming the failure; config errors stay 503, entity
   errors 404. Gates after: pytest 104 passed/5 skipped, mypy 41 files clean,
   ruff clean. DEEPSEEK_MODEL id unverified = ASM-012, live probe M3.
+
+## 2026-09-03 — M3 integration: INT-007 dual-provider live run (real DeepSeek + Vertex)
+
+- Human authorized the full live M3 run (real api.deepseek.com + AnthropicVertex,
+  one-way-door pause). Evidence: logs/hai-build-loop/M-INT007-INTEGRATION-integration.md.
+- Steps 1-14 regression on live Vertex all PASS (import → view mode, incl. browser
+  UC-15/16); existing live Vertex suite 5/5 (42.7s) — no regression after M1 vertex.py
+  transport wrap.
+- INT-007 steps 15-18 all PASS: fresh project selector default `deepseek` (SD-20);
+  legacy rows (genuine pre-INT-007 DB boot, :8001 probe) adopt `deepseek` on
+  `migrate_legacy_projects` (db.py:165-172); switch vertex↔deepseek persists on reload;
+  real deepseek journey (lenses/experts/generate/tone/critique) all 2xx + parsed +
+  persisted; step 18 `env -u DEEPSEEK_API_KEY` → 503 naming DEEPSEEK_API_KEY, no
+  fallback, vertex project 200 in the same window, restore → 201.
+- **ASM-012 probe RESOLVED**: api.deepseek.com accepts `deepseek-v4-flash` (default,
+  DEEPSEEK_MODEL override not needed). No spec/env-default follow-up.
+- M3F1 WARN (no env-gated deepseek live suite) fixed: backend/tests/test_live_deepseek.py
+  (3 tests mirroring test_live_ai.py) — live run 3 passed/15s; default suite now
+  104 passed/8 skipped (5 vertex + 3 deepseek env-gated). mypy 42 files, ruff clean.
+- Reviewer verdicts: M3 PASS (final round; NITs M3F2..M3F6 — F5 citation lines fixed
+  in evidence). Full offline suite re-run green after live run.
+- All §11.3 gates green → spec v1.7 INT-007 fully built. Loop close: commit + push
+  per standing authorization.

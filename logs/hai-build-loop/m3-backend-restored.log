@@ -1,0 +1,13 @@
+INFO:     Started server process [3517975]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:40288 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40292 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40292 - "GET /api/v1/projects/8/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40292 - "POST /api/v1/resources/30/lens-proposals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:60236 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3517975]
