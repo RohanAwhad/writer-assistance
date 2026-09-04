@@ -1,0 +1,20 @@
+L1 boot URL -> http://127.0.0.1:5173/login (login page via 401 navigation: true)
+L1 cookies before login: 0
+L2 wrong key -> inline error visible: true; URL stays /login: true
+L2 cookies after wrong key: 0
+L3 logged in; wa_session httpOnly=true secure=false
+L3 projects screen visible: true
+L4 project created; empty-state hint visible
+L4 import affordance present on empty project (header + CTA count=2)
+STEP1-UI-FAILED: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+  - waiting for locator('[data-testid="import-file-input"]') to be visible
+    14 × locator resolved to hidden <input multiple type="file" class="hidden" accept=".md,.markdown" data-testid="import-file-input"/>
+
+    at /tmp/opencode/int8s1/step1-ui.cjs:70:14 {
+  log: [
+    `  - waiting for locator('[data-testid="import-file-input"]') to be visible`,
+    '    14 × locator resolved to hidden <input multiple type="file" class="hidden" accept=".md,.markdown" data-testid="import-file-input"/>'
+  ],
+  name: 'TimeoutError'
+}

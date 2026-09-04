@@ -1,0 +1,25 @@
+S21L1 goto / (gate should 302 to /login)
+S21L1 landed on app login page: true
+S21L2 wrong key
+S21L2 inline error visible: true; still /login: true; cookies: 0
+S21L3 correct key
+S21L3 SPA open; wa_session httpOnly=true secure=false
+S21L3 projects screen: true
+S21L4 create fresh project
+S21L4 project created, empty workspace visible
+S21L5 upload 3 files through the browser picker
+S21L5 dialog has NO path field (non-file inputs: 0); copy: "Import Markdown files\n\nUpload Markdown files from your browser (.md or .markdown). They are snapshotted into app storage once; resources become read-only here.\n"
+S21L5 row alpha.md: true
+S21L5 row gamma.markdown: true
+S21L5 row empty.md: true
+S21L5 total rows: 3; import affordance after import (expect 0): 0
+S21L6 open doc -> renders read-only
+S21L6 alpha renders; edit surfaces (expect 0): 0
+S21L7 reload -> persistence + snapshot-once
+S21L7 rows after reload: 3; import affordance (expect 0): 0; console errors so far: 1
+S21L8 incognito second session -> gated again
+S21L8 incognito lands on login: true; cookies: 0
+S21L8 incognito /api/v1/projects status: 401
+S21 console errors (incl. deliberate wrong-key 401 fetch): 1
+  console-error: Failed to load resource: the server responded with a status of 401 (Unauthorized)
+STEP21-ALL-LEGS-DONE

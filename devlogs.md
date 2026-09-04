@@ -366,3 +366,31 @@
   sites / 9 test files); single method name uploadMarkdown(projectId, files);
   copy-ripple list completed.
 - Round-2 fresh reviewer: PASS, 3 cosmetic nits (S8-9..S8-11) accepted.
+
+## 2026-09-04 — INT-008 shipped: browser-upload import (spec v1.9, M1/M2/M3 PASS)
+
+- Spec v1.9 accepted after 2 reviewer rounds (S8-1..8 fixed: grammar -> SD-30,
+  R-010 scope note, no-on-disk wording, H36 ranges; commits 464992f + a256f04).
+- M1 backend (cd4f45e): multipart upload on the existing
+  POST /api/v1/projects/{id}/import; no server filesystem reads; SD-30 grammar
+  per part (.md/.markdown, basename w/o / or \\, not dot-leading, UTF-8, empty
+  ok); dup intra-request 409 + UNIQUE(project_id,path) 409 naming file;
+  all-or-nothing; flat path==filename; snapshot-once 409 unchanged; 10 MiB cap
+  413 (PayloadTooLargeError); python-multipart dep; conftest imported_project
+  helper migrates 41 call sites; 136 passed/8 skipped, mypy+ruff clean.
+  Reviewer PASS_WITH_WARN -> cheap fixes applied; dispositions M1-2/5/7 recorded.
+- M2 frontend (e1003fe): uploadMarkdown(projectId, files) FormData, no manual
+  Content-Type, ApiError + 401->/login; picker dialog replaces path input
+  (accept .md,.markdown multiple); inline {detail} errors; snapshot-once
+  affordance gone; copy sweep (no absolute-path/tree/on-disk language); 50
+  vitest, tsc + eslint clean. Reviewer PASS (NITs M2-1..3 fixed).
+- M3 integration: PASS. Reviewer-owned run — step 1 legs L1-L10 (UI picker +
+  empty .md + rejection legs incl. 409/400/404/413/byte-identity) + step 21
+  container journey through the picker (2 files + 1 empty, multipart 201).
+  Container refreshed to INT-008 image (writer-assistance-live Up, restart
+  unless-stopped, volume + INT-006 projects untouched). Sweep: zero path-import
+  remnants in backend/ + frontend/src/. Evidence:
+  logs/hai-build-loop/M-INT008-INTEGRATION-integration.md + m8-*.log/out.
+  NIT M3-1: stale local frontend/dist -> rebuilt (new picker copy confirmed).
+- INT-008 done-gate green (spec.md:410). Release line now requires backend +
+  frontend + integration + INT-007 + INT-006 + INT-008 gates — all green.

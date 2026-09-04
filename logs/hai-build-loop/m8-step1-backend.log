@@ -1,0 +1,73 @@
+INFO:     Started server process [3616056]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8011 (Press CTRL+C to quit)
+INFO:     127.0.0.1:47026 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41056 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41068 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41082 - "POST /login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41088 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:41092 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41098 - "POST /api/v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:41124 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41110 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41102 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3616056]
+INFO:     Started server process [3617250]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8011 (Press CTRL+C to quit)
+INFO:     127.0.0.1:43240 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43242 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:43248 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43254 - "POST /login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:43258 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:43274 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43284 - "POST /api/v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:43294 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43302 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43314 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43330 - "POST /api/v1/projects/1/import HTTP/1.1" 201 Created
+INFO:     127.0.0.1:43332 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43336 - "GET /api/v1/resources/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43344 - "GET /api/v1/resources/1/annotations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43360 - "GET /api/v1/resources/1/lens-proposals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43374 - "GET /api/v1/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43386 - "GET /api/v1/resources/4/annotations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43396 - "GET /api/v1/resources/4/lens-proposals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43398 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43440 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43410 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43426 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43446 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45092 - "POST /api/v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:45140 - "GET /api/v1/rounds?project_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45124 - "GET /api/v1/projects/2/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45108 - "GET /api/v1/projects/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45156 - "POST /api/v1/projects/2/import HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:45170 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:45184 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45200 - "POST /api/v1/projects/1/import HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:45216 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40086 - "POST /api/v1/projects/1/import HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:40100 - "GET /api/v1/projects/2/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40108 - "POST /api/v1/projects/999/import HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40116 - "POST /api/v1/projects/1/import HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:40132 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40134 - "GET /api/v1/resources/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40146 - "POST /api/v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:40158 - "POST /api/v1/projects/3/import HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:40164 - "GET /api/v1/projects/3/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40178 - "POST /api/v1/projects/3/import HTTP/1.1" 413 Content Too Large
+INFO:     127.0.0.1:40186 - "GET /api/v1/projects/3/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56414 - "POST /api/v1/projects/3/import HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55314 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:55326 - "POST /api/v1/projects/3/import HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:55332 - "GET /api/v1/projects/3/tree HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3617250]

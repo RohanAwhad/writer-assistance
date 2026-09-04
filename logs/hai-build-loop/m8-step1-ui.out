@@ -1,0 +1,27 @@
+L1 boot URL -> http://127.0.0.1:5173/login (login page via 401 navigation: true)
+L1 cookies before login: 0
+L2 wrong key -> inline error visible: true; URL stays /login: true
+L2 cookies after wrong key: 0
+L3 logged in; wa_session httpOnly=true secure=false
+L3 projects screen visible: true
+L4 project created; empty-state hint visible
+L4 import affordance present on empty project (header + CTA count=2)
+L5 dialog inputs total=1 non-file(input) count=0 (0 => no path field)
+L5 dialog copy server-path language: false
+L5 dialog copy: "Import Markdown files\n\nUpload Markdown files from your browser (.md or .markdown). They are snapshotted into app storage once; resources become read-only here.\n\nChoose files…\nCancel\nImport"
+L6 row alpha.md listed: true
+L6 row beta.md listed: true
+L6 row gamma.markdown listed: true
+L6 row empty.md listed: true
+L6 total doc rows: 4
+L6 import affordance after import (expect 0): 0
+L7 renders {"h1":true,"h2":true,"bullets":true,"emph":true}
+L7 edit surfaces (textarea/contenteditable) in doc view (expect 0): 0
+L8 empty.md renders 'This document is empty.'
+L9 reload keeps session (projects screen, no login redirect)
+L9 rows after reload: 4; import affordance (expect 0): 0
+L9 pageerrors: 0
+L10 UI batch with .txt -> inline 400 error naming notes.txt: true
+L10 dialog still open: true; doc rows (expect 0): 0
+L10 empty-state import affordance still present (nothing persisted): true
+STEP1-UI-ALL-LEGS-DONE

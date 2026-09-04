@@ -1,0 +1,145 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.15kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for ghcr.io/astral-sh/uv:0.11.16
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.13-slim
+#3 DONE 0.0s
+
+#4 [internal] load metadata for docker.io/library/node:24-slim
+#4 DONE 0.4s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 628B done
+#5 DONE 0.0s
+
+#6 [frontend-build 1/6] FROM docker.io/library/node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
+#6 DONE 0.0s
+
+#7 [stage-1 1/9] FROM docker.io/library/python:3.13-slim
+#7 DONE 0.0s
+
+#8 FROM ghcr.io/astral-sh/uv:0.11.16
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 377.71kB done
+#9 DONE 0.0s
+
+#10 [stage-1 2/9] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [stage-1 3/9] COPY --from=ghcr.io/astral-sh/uv:0.11.16 /uv /usr/local/bin/uv
+#11 CACHED
+
+#12 [stage-1 4/9] WORKDIR /app/backend
+#12 CACHED
+
+#13 [frontend-build 3/6] COPY frontend/package.json frontend/package-lock.json ./
+#13 CACHED
+
+#14 [frontend-build 2/6] WORKDIR /frontend
+#14 CACHED
+
+#15 [frontend-build 4/6] RUN npm ci
+#15 CACHED
+
+#16 [stage-1 5/9] COPY backend/pyproject.toml backend/uv.lock ./
+#16 DONE 0.0s
+
+#17 [frontend-build 5/6] COPY frontend/ ./
+#17 DONE 0.0s
+
+#18 [frontend-build 6/6] RUN npm run build
+#18 0.235 
+#18 0.235 > writer-assistance-frontend@0.1.0 build
+#18 0.235 > tsc --noEmit && vite build
+#18 0.235 
+#18 ...
+
+#19 [stage-1 6/9] RUN uv sync --frozen --no-dev
+#19 0.267 Using CPython 3.13.15 interpreter at: /usr/local/bin/python3
+#19 0.267 Creating virtual environment at: .venv
+#19 0.486 Downloading anthropic (1.2MiB)
+#19 0.486 Downloading uvloop (4.2MiB)
+#19 0.487 Downloading cryptography (4.5MiB)
+#19 0.487 Downloading pydantic-core (2.0MiB)
+#19 0.880  Downloaded anthropic
+#19 0.926  Downloaded pydantic-core
+#19 1.028  Downloaded uvloop
+#19 1.049  Downloaded cryptography
+#19 1.049 Prepared 39 packages in 773ms
+#19 1.080 Installed 39 packages in 30ms
+#19 1.080  + annotated-doc==0.0.5
+#19 1.080  + annotated-types==0.8.0
+#19 1.080  + anthropic==1.3.0
+#19 1.080  + anyio==4.15.0
+#19 1.080  + certifi==2026.7.22
+#19 1.080  + cffi==2.1.1
+#19 1.080  + charset-normalizer==3.5.1
+#19 1.080  + click==8.5.0
+#19 1.080  + cryptography==50.0.1
+#19 1.080  + docstring-parser==0.18.0
+#19 1.080  + fastapi==0.141.1
+#19 1.080  + google-auth==2.57.0
+#19 1.080  + h11==0.16.0
+#19 1.080  + httpcore==1.0.9
+#19 1.080  + httpcore2==2.12.0
+#19 1.080  + httptools==0.8.0
+#19 1.080  + httpx==0.28.1
+#19 1.080  + httpx2==2.12.0
+#19 1.080  + idna==3.19
+#19 1.080  + jiter==0.16.0
+#19 1.080  + pyasn1==0.6.4
+#19 1.080  + pyasn1-modules==0.4.2
+#19 1.080  + pycparser==3.0
+#19 1.080  + pydantic==2.13.5
+#19 1.080  + pydantic-core==2.46.5
+#19 1.080  + python-dotenv==1.2.3
+#19 1.080  + python-multipart==0.0.32
+#19 1.080  + pyyaml==6.0.3
+#19 1.080  + requests==2.34.2
+#19 1.080  + sniffio==1.3.1
+#19 1.080  + starlette==1.6.0
+#19 1.080  + truststore==0.10.4
+#19 1.080  + typing-extensions==4.16.0
+#19 1.080  + typing-inspection==0.4.4
+#19 1.080  + urllib3==2.7.0
+#19 1.080  + uvicorn==0.52.4
+#19 1.080  + uvloop==0.22.1
+#19 1.080  + watchfiles==1.2.0
+#19 1.080  + websockets==17.1
+#19 DONE 1.2s
+
+#20 [stage-1 7/9] COPY backend/app ./app
+#20 DONE 0.0s
+
+#18 [frontend-build 6/6] RUN npm run build
+#18 2.199 vite v8.2.2 building client environment for production...
+#18 2.216 transforming...
+#18 2.434 ✓ 1907 modules transformed.
+#18 2.510 rendering chunks...
+#18 2.557 computing gzip size...
+#18 2.560 dist/index.html                   0.40 kB │ gzip:   0.26 kB
+#18 2.560 dist/assets/index-Yk6fjX0y.css   23.68 kB │ gzip:   5.36 kB
+#18 2.560 dist/assets/index-CGyHTxXn.js   342.29 kB │ gzip: 104.59 kB
+#18 2.560 
+#18 2.561 ✓ built in 361ms
+#18 DONE 2.6s
+
+#21 [stage-1 8/9] COPY --from=frontend-build /frontend/dist /app/frontend/dist
+#21 DONE 0.0s
+
+#22 [stage-1 9/9] RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin writer     && mkdir -p /data     && chown -R writer:writer /app /data
+#22 DONE 4.1s
+
+#23 exporting to image
+#23 exporting layers
+#23 exporting layers 0.3s done
+#23 writing image sha256:0ce1605cc3fe22824f42239730ad46e655574d32f7efd252167fe9148bfbcee9 done
+#23 naming to docker.io/library/writer-assistance:live done
+#23 DONE 0.3s
