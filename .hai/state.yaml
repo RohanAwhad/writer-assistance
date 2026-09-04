@@ -604,12 +604,14 @@ agent_context:
     - id: ASM-013
       intent_ids: [INT-007]
       statement: >
-        The in-app provider selector persists its choice per project or per
-        round; granularity is unresolved (OQ-08).
+        The in-app provider selector persists per project (spec v1.7 SD-20,
+        agent-resolved as a two-way door); a per-round override could be
+        added later without storage loss.
       status: agent_derived
       consequence: >
-        Storage/UI shape may need adjustment once the human picks the
-        granularity.
+        If the human vetoes per-project granularity (OQ-08 stays listed as
+        open in state.yaml until then), the reshape is bounded: move the
+        stored value from the project row to round rows.
     - id: ASM-014
       intent_ids: [INT-006]
       statement: >

@@ -188,3 +188,25 @@
   logs/hai-build-loop/M-VM-INTEGRATION-integration.md.
 - All §11.3 milestones green → spec v1.6 fully built. Uncommitted until human authorizes.
 
+
+## 2026-09-03 — Spec v1.7: INT-007 dual live AI providers (spec loop)
+
+- INT-007 captured in state (DEC-024..027, H26/H28/H29/H31/H33) via checkpoint;
+  DEC-020 hostname pinned to writer.assistance.rohanawhad.com (H34) same session.
+- Spec loop (fresh writer + fresh reviewer subagents, spec.md v1.6 → v1.7):
+  - R-004 reworded to provider-boundary semantics (DEC-004 as amended by DEC-024).
+  - New §2.8 R-070..R-074: dual providers behind AIClient boundary (R-070),
+    in-app per-project selector not env var (R-071, DEC-027), DEEPSEEK_API_KEY
+    runtime config + .env.example docs (R-072, DEC-026/DEC-015), env-configurable
+    deepseek model id, fallback deepseek-v4-flash, unverified (R-073, ASM-012),
+    clean 503 when selected provider unconfigured, no fallback (R-074).
+  - SD-20 (agent two-way, resolves OQ-08): selector per project; ai_provider
+    column; fresh + legacy rows default deepseek on schema init; SD-21 provider
+    resolution at call time via project context.
+  - UC-17/UC-18; §11.2 steps 15-18 appended (1-14 untouched); §11.3 INT-007 gate.
+- Reviewer round 1: PASS + 2 WARN (S1F1 step-18 env scrub — ~/.bashrc exports
+  DEEPSEEK_API_KEY so .env removal alone can't reproduce 503; S1F2 stale R-004
+  coverage row) + 4 NIT; all 6 fixed by writer round 2 and verified by diff.
+- INT-006 (container/tunnel/auth) deliberately out of scope — separate run.
+- ASM-013 rewritten (agent context): per-project resolution recorded (SD-20),
+  OQ-08 stays open in state.yaml until human veto window closes.
