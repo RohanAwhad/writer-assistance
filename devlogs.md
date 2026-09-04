@@ -278,3 +278,22 @@
   in evidence). Full offline suite re-run green after live run.
 - All §11.3 gates green → spec v1.7 INT-007 fully built. Loop close: commit + push
   per standing authorization.
+
+## 2026-09-03 — Spec v1.8: INT-006 container deployment + auth gate (spec loop)
+
+- Spec loop (fresh writer + fresh reviewer subagents, spec.md v1.7 → v1.8):
+  - New §2.9 R-075..R-078: AUTH_API_KEY login gate w/ custom server-rendered login
+    screen + HttpOnly session cookie (R-075, DEC-021/022), SPA static serving +
+    /api preservation (R-076, DEC-019), single multi-stage container w/ named
+    volume fresh DB + no-compose (R-077, DEC-019/023), fail-closed boot when key
+    missing in container (R-078, DEC-021).
+  - SD-22..27 (agent-owned): gate-off default keeps offline suites green (SD-24),
+    HMAC-signed stateless cookie derived from AUTH_API_KEY — no new secret (SD-23),
+    --network host + bind 127.0.0.1 (SD-26), threat model bounded to loopback (SD-27).
+  - F14 login/logout; UC-19..22; §11.2 steps 19..23 appended; §11.3 three INT-006
+    done-gates (auth-gate, container, public-exposure).
+  - Reviewer r1 FAIL (S2F-1 blocker: step-20 docker `-e ANTHROPIC_MODEL` injects
+    Vertex-invalid shell alias + ANTHROPIC_SMALL_FAST_MODEL never passed → vertex
+    live leg unexecutable; NITs S2F-2..4) → writer r2 fixed all → reviewer r2 PASS
+    (1 procedural NIT S2F2-1 applied: drop `-e` flag for shell-absent vars).
+- DEC-014 "no hosting" scope amendment disclosed (§1/§3/§8). No state changes.
