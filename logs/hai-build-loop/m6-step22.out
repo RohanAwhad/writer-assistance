@@ -1,0 +1,22 @@
+s22 pre-restart login ok, url=http://127.0.0.1:8000/
+s22 pre-restart login ok, url=http://127.0.0.1:8000/
+s22 pre-restart projects: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s22 pre-restart projects: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s22 issuing: docker restart writer-assistance-live
+s22 issuing: docker restart writer-assistance-live
+s22 container back up: true
+s22 container back up: true
+s22 post-restart reload url=http://127.0.0.1:8000/ (expect / — session survived, no login)
+s22 post-restart reload url=http://127.0.0.1:8000/ (expect / — session survived, no login)
+s22 post-restart provider="vertex" (expect vertex — DB survived)
+s22 post-restart provider="vertex" (expect vertex — DB survived)
+s22 post-restart project tree intact (3 resources)
+s22 post-restart project tree intact (3 resources)
+s22 post-restart projects: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s22 post-restart projects: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s22 POST /logout status=302 (expect 302)
+s22 POST /logout status=302 (expect 302)
+s22 post-logout GET /api/v1/projects status=401 body={"detail":"authentication required"} (expect 401)
+s22 post-logout GET /api/v1/projects status=401 body={"detail":"authentication required"} (expect 401)
+s22 post-logout nav url=http://127.0.0.1:8000/login (expect /login — gate returned)
+s22 post-logout nav url=http://127.0.0.1:8000/login (expect /login — gate returned)

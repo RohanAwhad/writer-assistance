@@ -1,0 +1,100 @@
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52692 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52702 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52708 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52722 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:52726 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:52732 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:52740 - "POST /login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52754 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:52764 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51006 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:51012 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51018 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51024 - "GET /assets/index-EvIBjYDX.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51028 - "GET /api/v1/nonexistent-route HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54964 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:54964 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "POST /login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54964 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:54964 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /assets/index-EvIBjYDX.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54980 - "GET /assets/index-Yk6fjX0y.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "POST /api/v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:54980 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54996 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53586 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53586 - "POST /api/v1/projects/1/import HTTP/1.1" 201 Created
+INFO:     127.0.0.1:54964 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54996 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54980 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53586 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53586 - "POST /api/v1/resources/4/lens-proposals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:54980 - "PUT /api/v1/projects/1/provider HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54980 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54980 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54964 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54996 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54980 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53586 - "POST /api/v1/resources/4/lens-proposals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:34888 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34888 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:34888 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34888 - "GET /assets/index-EvIBjYDX.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34900 - "GET /assets/index-Yk6fjX0y.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34916 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34888 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1]
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:46824 - "GET /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46836 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46842 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46842 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46858 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46842 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46868 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46836 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46836 - "POST /logout HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46836 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:46868 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:46868 - "GET /login HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "HEAD / HTTP/1.1" 302 Found
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET / HTTP/1.1" 302 Found
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:54438 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 401 Unauthorized
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET / HTTP/1.1" 302 Found
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /login HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "POST /login HTTP/1.1" 302 Found
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET / HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /assets/index-Yk6fjX0y.css HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /assets/index-EvIBjYDX.js HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "POST /api/v1/resources/4/lens-proposals HTTP/1.1" 201 Created
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "PUT /api/v1/projects/1/provider HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "POST /api/v1/resources/4/lens-proposals HTTP/1.1" 201 Created
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET / HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects/1/tree HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/projects/1 HTTP/1.1" 200 OK
+INFO:     2601:189:8580:9bc0:51ff:b58:6fb0:909a:0 - "GET /api/v1/rounds?project_id=1 HTTP/1.1" 200 OK

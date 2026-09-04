@@ -1,0 +1,43 @@
+file:///tmp/opencode/m6-scripts/m6_step21.mjs:5
+const { chromium } = require("/home/rohan/1_Projects/writer-assistance/.hai/node_modules/playwright");
+                     ^
+
+ReferenceError: require is not defined in ES module scope, you can use import instead
+    at file:///tmp/opencode/m6-scripts/m6_step21.mjs:5:22
+    at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.17.1
+s21 nav / -> url=http://127.0.0.1:8000/login title=Sign in · Writer Assistance
+s21 nav / -> url=http://127.0.0.1:8000/login title=Sign in · Writer Assistance
+s21 login page: h1="Writer Assistance" input#key=true button="Sign in"
+s21 login page: h1="Writer Assistance" input#key=true button="Sign in"
+s21 wrong key -> inline #login-error visible=true cookies=0 (expect 0)
+s21 wrong key -> inline #login-error visible=true cookies=0 (expect 0)
+s21 correct key -> url=http://127.0.0.1:8000/ h1="Writer Assistant"
+s21 correct key -> url=http://127.0.0.1:8000/ h1="Writer Assistant"
+s21 wa_session: httpOnly=true secure=false (expect httpOnly=true secure=false over plain http)
+s21 wa_session: httpOnly=true secure=false (expect httpOnly=true secure=false over plain http)
+s21 fresh project provider = "deepseek" (expect deepseek)
+s21 fresh project provider = "deepseek" (expect deepseek)
+s21 workspace header shows project name: M6 Container Journey
+s21 workspace header shows project name: M6 Container Journey
+s21 import status=201 imported_files=3 (expect 201 / 3)
+s21 import status=201 imported_files=3 (expect 201 / 3)
+s21 reload url=http://127.0.0.1:8000/ (expect /, still logged in)
+s21 reload url=http://127.0.0.1:8000/ (expect /, still logged in)
+s21 after reload+reopen: provider="deepseek" resources line="3 resources"
+s21 after reload+reopen: provider="deepseek" resources line="3 resources"
+s21 DEEPSEEK lens: status=201 proposals=5 time=3.5s (expect 201 / >=3 / provider=deepseek)
+s21 DEEPSEEK lens: status=201 proposals=5 time=3.5s (expect 201 / >=3 / provider=deepseek)
+s21 switched provider to vertex: value="vertex"
+s21 switched provider to vertex: value="vertex"
+s21 after reload+reopen: provider="vertex" (expect vertex, persisted)
+s21 after reload+reopen: provider="vertex" (expect vertex, persisted)
+s21 VERTEX lens: status=201 proposals=5 time=7.9s (expect 201 / >=3 / provider=vertex, in-container ADC)
+s21 VERTEX lens: status=201 proposals=5 time=7.9s (expect 201 / >=3 / provider=vertex, in-container ADC)
+s21 console errors: 1
+s21 console errors: 1
+s21 console errors detail: ["Failed to load resource: the server responded with a status of 401 (Unauthorized)"]
+s21 console errors detail: ["Failed to load resource: the server responded with a status of 401 (Unauthorized)"]

@@ -1,0 +1,34 @@
+== public (http through Cloudflare tunnel) gate checks ==
+unauth /api/v1/projects -> 401 (expect 401)
+unauth body: {"detail":"authentication required"}
+public GET / -> 302 redirect=http://writer.assistance.rohanawhad.com/login
+== XFP probe over public http (expect: cookie non-Secure, XFP http) ==
+Set-Cookie: wa_session=<redacted>; HttpOnly; Max-Age=2592000; Path=/; SameSite=lax
+== viewer + other ingress intact ==
+hai.writer.assistance http -> 200
+localhost:4180 -> 200
+localhost:8000 -> 401
+s23 unauth https GET /api/v1/projects status=401 body={"detail":"authentication required"} (expect 401)
+s23 unauth https GET /api/v1/projects status=401 body={"detail":"authentication required"} (expect 401)
+s23 nav url=http://writer.assistance.rohanawhad.com/login (expect http://writer.assistance.rohanawhad.com/login — app's own login, no Access)
+s23 nav url=http://writer.assistance.rohanawhad.com/login (expect http://writer.assistance.rohanawhad.com/login — app's own login, no Access)
+s23 title=Sign in · Writer Assistance h1="Writer Assistance"
+s23 title=Sign in · Writer Assistance h1="Writer Assistance"
+s23 login ok; wa_session httpOnly=true secure=false (SD-27 XFP probe: secure=true iff cloudflared forwards X-Forwarded-Proto)
+s23 login ok; wa_session httpOnly=true secure=false (SD-27 XFP probe: secure=true iff cloudflared forwards X-Forwarded-Proto)
+s23 projects via https: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s23 projects via https: [{"id":1,"name":"M6 Container Journey","provider":"vertex"}]
+s23 VERTEX lens via https: status=201 proposals=5 time=5.5s
+s23 VERTEX lens via https: status=201 proposals=5 time=5.5s
+s23 provider before switch: "vertex" (expect vertex)
+s23 provider before switch: "vertex" (expect vertex)
+s23 provider after switch: "deepseek" (expect deepseek)
+s23 provider after switch: "deepseek" (expect deepseek)
+s23 DEEPSEEK lens via https: status=201 proposals=5 time=3.4s
+s23 DEEPSEEK lens via https: status=201 proposals=5 time=3.4s
+s23 reload url=http://writer.assistance.rohanawhad.com/ (expect http://writer.assistance.rohanawhad.com/ — session kept over https)
+s23 reload url=http://writer.assistance.rohanawhad.com/ (expect http://writer.assistance.rohanawhad.com/ — session kept over https)
+s23 post-reload provider="deepseek" (expect deepseek)
+s23 post-reload provider="deepseek" (expect deepseek)
+s23 console errors: 0
+s23 console errors: 0

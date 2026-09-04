@@ -1,0 +1,20 @@
+6000a9b433cb4ae8468238d14e23e2ff4679d223d8ebd32e62ab9e73587d7d79
+boot: 200 on /login
+unauth /api/v1/projects -> 401 (expect 401)
+body: {"detail":"authentication required"}
+wrong-key POST /login -> 401 (expect 401)
+correct-key POST /login -> 302 (expect 302)
+cookie jar rows: 1
+projects after login on fresh volume: []
+-- container env names (in-container, from env-file + -e only) --
+  ANTHROPIC_MODEL
+  ANTHROPIC_SMALL_FAST_MODEL
+  ANTHROPIC_VERTEX_PROJECT_ID
+  AUTH_API_KEY
+  DEEPSEEK_API_KEY
+  GOOGLE_VERTEX_LOCATION
+-- in-container ANTHROPIC_MODEL value (name allowed; must be env-file claude-sonnet-5, never the bashrc alias) --
+  ANTHROPIC_MODEL=claude-sonnet-5
+m6-fresh
+m6-fresh-vol
+== DONE ==

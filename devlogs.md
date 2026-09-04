@@ -327,3 +327,27 @@
   (c) project + session survive restart. Reviewer PASS, NITs only (CMD one-line
   vs SD-24 "two-line" phrasing; floating base tags; warm-cache assumption).
 - Cleanup confirmed: containers/volume/image removed.
+
+## 2026-09-04 — M3 integration: INT-006 deployment LIVE (real AI + public tunnel)
+
+- Human authorized full live M3 (DeepSeek + Vertex calls, public DNS CNAME + tunnel
+  ingress creation) and chose LEAVE-DEPLOYED end state. Evidence:
+  logs/hai-build-loop/M-INT006-INTEGRATION-integration.md (+ m6-*.log/out, screens/).
+- Steps 19-23 green: fail-closed key-less boot (exit 1, R-078); deployment run per
+  step-20 env rules (env-file AUTH_API_KEY + ANTHROPIC_MODEL=claude-sonnet-5; -e
+  DEEPSEEK/vertex vars; NO -e ANTHROPIC_MODEL); browser login journey + real AI:
+  deepseek lens 3.4s + vertex lens 5.5s (vertex auth via host ADC bind-mounted
+  read-only, GOOGLE_APPLICATION_CREDENTIALS — nothing baked); restart persistence
+  (project + stateless session). Public: 401 gate + login + live AI through tunnel.
+- End state: container writer-assistance-live Up (--restart unless-stopped), volume
+  writer-assistance-data, image writer-assistance:live; DNS + ingress live.
+- **Hostname renamed (H36)**: writer.assistance.rohanawhad.com has no cert coverage
+  on the free plan (3-level); human chose the wildcard-covered single-label form
+  writer-assistance.rohanawhad.com. State DEC-020 amended (+H36), spec renamed
+  (0 stale refs), DNS/ingress swapped, old hostname NXDOMAIN. https verified:
+  302 /login, 401 JSON, login cookie **Secure** (XFP probe positive).
+- Reviewer: M3 PASS (final round; M3Fn-1 resolved via rename; NITs M3Fn-2/3 carried/
+  addressed; doc NITs fixed). Gates re-run green: backend 123 passed/8 skipped,
+  mypy 44 files, ruff clean; code tree clean vs 576e7b4.
+- Residual: UC-20 SPA logout button absent (manual UX item, non-blocking).
+- INT-008 (browser-upload import, H35/DEC-028) captured remotely — next run.

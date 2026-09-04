@@ -1,0 +1,11 @@
+== step 19: key-less docker run (temp volume) ==
+exit_code=1 (expect 1)
+elapsed=0s
+-- stderr/stdout of the run --
+AUTH_API_KEY is required: refusing to boot gate-open (R-078). Provide it via --env-file backend/.env or -e AUTH_API_KEY=...
+stderr-msg=PASS
+== nothing listens on 8000 ==
+port8000-closed=PASS (curl rc=7)
+== temp volume stayed empty ==
+volume-exists=yes (empty, never written)
+== DONE ==

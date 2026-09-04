@@ -1,0 +1,37 @@
+== step 20: deployment run ==
+3de6fc763b9625355e51a3676fa5de88c141265b8e9fd23e95317addbd10bbeb
+-- container state --
+writer-assistance-live Up 2 seconds 
+restart=unless-stopped network=host
+-- in-container env names --
+  ANTHROPIC_MODEL
+  ANTHROPIC_SMALL_FAST_MODEL
+  ANTHROPIC_VERTEX_PROJECT_ID
+  AUTH_API_KEY
+  DEEPSEEK_API_KEY
+  GOOGLE_APPLICATION_CREDENTIALS
+  GOOGLE_VERTEX_LOCATION
+  WRITER_ASSISTANCE_DB
+  ANTHROPIC_MODEL=claude-sonnet-5 (must be claude-sonnet-5)
+  ADC file readable in-container: yes
+-- fresh DB on named volume --
+  tables: ['annotations', 'expert_notes', 'expert_runs', 'lens_proposals', 'notes_dump_entries', 'notes_dumps', 'projects', 'reading_rounds', 'report_block_links', 'report_blocks', 'reports', 'resource_docs', 'resource_nodes', 'round_docs', 'sqlite_sequence']
+  projects: 0
+-- gate checks --
+unauth /api/v1/projects -> 401 (expect 401)
+unauth body: {"detail":"authentication required"}
+unauth GET / -> 302 -> http://127.0.0.1:8000/login (expect 302 -> /login)
+SPA index references asset: 
+asset GET -> 302 (expect 200; proves static serving)
+wrong-key POST /login -> 401 (expect 401)
+correct-key POST /login -> 302 (expect 302)
+cookie flags (name/attrs only):
+  wa_session httpOnly? yes secure? no path? (see raw)
+projects with session: [] (expect []; fresh DB)
+local dev DB md5: 4cea2ff4e71f710e3f81f09002bc36f1  backend/data/writer-assistance.db
+== DONE ==
+GET / with session -> 200 (expect 200)
+SPA index has #root: yes
+asset: /assets/index-EvIBjYDX.js
+asset GET -> 200 (expect 200)
+gated unknown API route -> 404 (expect 404, gate passed)

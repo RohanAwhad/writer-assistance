@@ -244,6 +244,11 @@ evidence:
     quote: >
       use writer.assistance.rohanawhad.com as the domain for hosting.
       update the hai state intent decision
+  H36:
+    actor: human
+    type: explicit_selection
+    source_ref: prt_06aa7c8c8001MaaFOfwQ4kN1nC
+    quote: "change it to writer-assistance.rohan..."
 
   H35:
     actor: human
@@ -410,10 +415,10 @@ human_approved:
         - id: DEC-020
           statement: >
             The app is exposed publicly via a Cloudflare tunnel to the
-            public hostname writer.assistance.rohanawhad.com; the hostname
-            is reserved for the app container (the mission-control viewer
-            is not served on it).
-          evidence: [H24, H34]
+            public hostname writer-assistance.rohanawhad.com (single-label
+            form covered by the zone wildcard cert for https); the
+            mission-control viewer is not served on it.
+          evidence: [H24, H34, H36]
         - id: DEC-021
           statement: >
             The container enforces a minimal password/API-key gate; a key
