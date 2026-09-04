@@ -351,3 +351,18 @@
   mypy 44 files, ruff clean; code tree clean vs 576e7b4.
 - Residual: UC-20 SPA logout button absent (manual UX item, non-blocking).
 - INT-008 (browser-upload import, H35/DEC-028) captured remotely — next run.
+
+## 2026-09-04 — INT-008 spec v1.9 accepted (browser-upload import)
+
+- INT-008/DEC-028 (H35): replace server-filesystem-path import (POST
+  /api/v1/projects/{id}/import JSON {"path": ...}) with browser upload of
+  Markdown files; immutable snapshot semantics (DEC-016) unchanged.
+- Spec writer round 1: R-079..R-081, F15, UC-23, SD-28 (flat placement),
+  SD-29 (10 MiB cap); reviewer PASS w/ S8-1..S8-3 WARN + 5 NIT.
+- Fix round (same writer session): acceptance grammar -> SD-30 (two-way),
+  R-080/081 narrowed to record-backed core; R-010 scope note (flat imports);
+  §11.2 step 2 + §11.3 gate off "on disk" language; §6 header multipart
+  exception; H36 in evidence ranges; imported_project = helper (41 call
+  sites / 9 test files); single method name uploadMarkdown(projectId, files);
+  copy-ripple list completed.
+- Round-2 fresh reviewer: PASS, 3 cosmetic nits (S8-9..S8-11) accepted.
