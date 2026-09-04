@@ -76,6 +76,7 @@ def test_login_page_served_when_gate_on(gate_client: TestClient) -> None:
     body = response.text
     assert '<form method="post" action="/login">' in body
     assert 'name="key"' in body
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in body
 
 
 def test_wrong_key_401_no_cookie_no_session(gate_client: TestClient) -> None:

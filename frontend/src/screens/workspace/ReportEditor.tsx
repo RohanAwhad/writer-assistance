@@ -184,7 +184,7 @@ export default function ReportEditor({ reportId, roundName, onReportDeleted }: R
             editing stage — this round&apos;s reading actions are closed
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {exportError !== null && <InlineError message={exportError} />}
           <Button
             size="sm"

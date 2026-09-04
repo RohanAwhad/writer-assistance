@@ -1,0 +1,4 @@
+[390] requestfailed: DELETE http://127.0.0.1:8010/api/v1/annotations/4 net::ERR_ABORTED
+[390] requestfailed: DELETE http://127.0.0.1:8010/api/v1/annotations/6 net::ERR_ABORTED
+[390] requestfailed: GET http://127.0.0.1:8010/login net::ERR_ABORTED
+[390] console.error: Failed to load resource: the server responded with a status of 401 (Unauthorized)

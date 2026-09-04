@@ -1,0 +1,121 @@
+[2026-09-04T14:58:51.052Z] ==== ctx 390x844 (phone) start ====
+[2026-09-04T14:59:21.924Z] ctx 390 FAILED: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'int009-rr', exact: true })
+
+[2026-09-04T14:59:21.924Z] ==== ctx 360x800 (phone) start ====
+[2026-09-04T14:59:24.122Z] ctx 360 FAILED: locator.click: Target page, context or browser has been closed
+Call log:
+  - waiting for getByRole('button', { name: 'int009-rr', exact: true })
+
+[2026-09-04T14:59:24.122Z] ==== ctx 768x1024 (tablet) start ====
+[2026-09-04T14:59:24.125Z] ctx 768 FAILED: browser.newContext: Protocol error (Target.createBrowserContext): Failed to create browser context.
+[2026-09-04T14:59:24.125Z] ==== ctx 1024x768 (desktop) start ====
+[2026-09-04T14:59:24.126Z] ctx 1024 FAILED: browser.newContext: Target page, context or browser has been closed
+[2026-09-04T14:59:24.127Z] ==== ctx 1280x900 (desktop) start ====
+[2026-09-04T14:59:24.127Z] ctx 1280 FAILED: browser.newContext: Target page, context or browser has been closed
+[2026-09-04T14:59:24.128Z] P3 WALK COMPLETE
+[2026-09-04T15:00:39.526Z] ==== ctx 390x844 (phone) start ====
+[2026-09-04T15:01:10.386Z] ctx 390 FAILED: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'int009-rr', exact: true })
+
+[2026-09-04T15:01:10.387Z] ==== ctx 360x800 (phone) start ====
+[2026-09-04T15:01:41.234Z] ctx 360 FAILED: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'int009-rr', exact: true })
+
+[2026-09-04T15:01:41.235Z] ==== ctx 768x1024 (tablet) start ====
+[2026-09-04T15:01:45.667Z] ctx 768 FAILED: locator.click: Target page, context or browser has been closed
+Call log:
+  - waiting for getByRole('button', { name: 'int009-rr', exact: true })
+
+[2026-09-04T15:01:45.667Z] ==== ctx 1024x768 (desktop) start ====
+[2026-09-04T15:01:45.670Z] ctx 1024 FAILED: browser.newContext: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /home/rohan/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/tmp/playwright_chromiumdev_profile-Hj6Euj --remote-debugging-pipe --no-startup-window
+<launched> pid=3904198
+[pid=3904198][err] [0904/110039.558604:WARNING:sandbox/policy/linux/sandbox_linux.cc:405] InitializeSandbox() called with multiple threads in process gpu-process.
+[pid=3904198] <gracefully close start>
+[2026-09-04T15:01:45.671Z] ==== ctx 1280x900 (desktop) start ====
+[2026-09-04T15:01:45.672Z] ctx 1280 FAILED: browser.newContext: Target page, context or browser has been closed
+[2026-09-04T15:01:45.673Z] P3 WALK COMPLETE
+[2026-09-04T15:02:15.084Z] ==== ctx 390x844 (phone) start ====
+[2026-09-04T15:02:31.097Z] ctx 390 FAILED: page.waitForSelector: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator('text=Market sizing for the northern region grew by twelve percent last year.') to be visible
+
+[2026-09-04T15:02:31.098Z] ==== ctx 360x800 (phone) start ====
+[2026-09-04T15:02:47.078Z] ctx 360 FAILED: page.waitForSelector: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator('text=Market sizing for the northern region grew by twelve percent last year.') to be visible
+
+[2026-09-04T15:02:47.079Z] ==== ctx 768x1024 (tablet) start ====
+[2026-09-04T15:03:03.027Z] ctx 768 FAILED: page.waitForSelector: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator('text=Market sizing for the northern region grew by twelve percent last year.') to be visible
+
+[2026-09-04T15:03:03.028Z] ==== ctx 1024x768 (desktop) start ====
+[2026-09-04T15:03:04.168Z] ctx 1024 FAILED: locator.waitFor: Error: strict mode violation: locator('aside').getByText('Retention analysis') resolved to 2 elements:
+    1) <span class="text-sm font-medium">Retention analysis</span> aka locator('span').filter({ hasText: 'Retention analysis' })
+    2) <div class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors border-transparent bg-secondary text-secondary-foreground">Retention analysis</div> aka getByText('Retention analysis').nth(1)
+
+Call log:
+  - waiting for locator('aside').getByText('Retention analysis') to be visible
+
+[2026-09-04T15:03:04.168Z] ==== ctx 1280x900 (desktop) start ====
+[2026-09-04T15:03:05.266Z] ctx 1280 FAILED: locator.waitFor: Error: strict mode violation: locator('aside').getByText('Retention analysis') resolved to 2 elements:
+    1) <span class="text-sm font-medium">Retention analysis</span> aka locator('span').filter({ hasText: 'Retention analysis' })
+    2) <div class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors border-transparent bg-secondary text-secondary-foreground">Retention analysis</div> aka getByText('Retention analysis').nth(1)
+
+Call log:
+  - waiting for locator('aside').getByText('Retention analysis') to be visible
+
+[2026-09-04T15:03:05.292Z] P3 WALK COMPLETE
+[2026-09-04T15:10:11.003Z] ==== ctx 390x844 (phone) start ====
+[2026-09-04T15:10:12.354Z] 390: lens Select tapped (non-AI PUT)
+[2026-09-04T15:10:12.453Z] 390: Keep executed
+[2026-09-04T15:10:13.738Z] 390: tap-delete annotation 2 -> 1
+[2026-09-04T15:10:45.896Z] ctx 390 FAILED: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('dialog') to be hidden
+    64 × locator resolved to visible <div role="dialog" aria-modal="true" class="fixed inset-0 z-40" aria-label="Resources & rounds">…</div>
+
+[2026-09-04T15:10:45.896Z] ==== ctx 360x800 (phone) start ====
+[2026-09-04T15:10:47.199Z] 360: Discard executed
+[2026-09-04T15:11:19.312Z] ctx 360 FAILED: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('dialog') to be hidden
+    64 × locator resolved to visible <div role="dialog" aria-modal="true" class="fixed inset-0 z-40" aria-label="Resources & rounds">…</div>
+
+[2026-09-04T15:11:19.312Z] ==== ctx 768x1024 (tablet) start ====
+[2026-09-04T15:11:22.393Z] 768: Edit & add (merge) executed
+[2026-09-04T15:11:55.725Z] ctx 768 FAILED: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('dialog') to be hidden
+    64 × locator resolved to visible <div role="dialog" aria-modal="true" class="fixed inset-0 z-40" aria-label="Resources & rounds">…</div>
+
+[2026-09-04T15:11:55.726Z] ==== ctx 1024x768 (desktop) start ====
+[2026-09-04T15:11:58.795Z] ctx 1024 done: 2 failures
+[2026-09-04T15:11:58.795Z] ==== ctx 1280x900 (desktop) start ====
+[2026-09-04T15:12:01.026Z] export: report-2.md 282 bytes
+[2026-09-04T15:12:01.994Z] ctx 1280 done: 2 failures
+[2026-09-04T15:12:02.017Z] P3 WALK COMPLETE
+[2026-09-04T15:16:22.689Z] ==== ctx 390x844 (phone) start ====
+[2026-09-04T15:16:23.997Z] 390: lens Select tapped
+[2026-09-04T15:16:24.102Z] 390: Keep executed
+[2026-09-04T15:16:25.366Z] 390: tap-delete annotation 2 -> 1
+[2026-09-04T15:16:32.919Z] rotate leg 390 done
+[2026-09-04T15:16:32.922Z] ctx 390 done: 4 failures
+[2026-09-04T15:16:32.923Z] ==== ctx 360x800 (phone) start ====
+[2026-09-04T15:16:34.235Z] 360: Discard executed
+[2026-09-04T15:16:38.048Z] ctx 360 done: 8 failures
+[2026-09-04T15:16:38.049Z] ==== ctx 768x1024 (tablet) start ====
+[2026-09-04T15:16:41.197Z] 768: Edit & add (merge) executed
+[2026-09-04T15:16:46.265Z] ctx 768 done: 0 failures
+[2026-09-04T15:16:46.265Z] ==== ctx 1024x768 (desktop) start ====
+[2026-09-04T15:16:50.765Z] ctx 1024 done: 0 failures
+[2026-09-04T15:16:50.765Z] ==== ctx 1280x900 (desktop) start ====
+[2026-09-04T15:17:05.482Z] ctx 1280 done: 1 failures
+[2026-09-04T15:17:05.500Z] P3 WALK COMPLETE

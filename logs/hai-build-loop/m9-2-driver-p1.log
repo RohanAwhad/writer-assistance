@@ -1,0 +1,37 @@
+[2026-09-04T14:56:06.683Z] login ok -> projects screen
+[2026-09-04T14:56:06.804Z] project created+opened: int009-rr
+[2026-09-04T14:56:06.907Z] imported alpha.md + beta.md via browser picker
+[2026-09-04T14:56:06.975Z] doc open: alpha.md
+[2026-09-04T14:56:07.536Z] highlight created via mouse selection
+[2026-09-04T14:56:08.121Z] anchored note created via mouse selection
+[2026-09-04T14:56:08.205Z] round created: int009 Round A
+[2026-09-04T14:56:08.303Z] round created: int009 Round B
+[2026-09-04T14:56:08.435Z] project created+opened: int009-empty
+[2026-09-04T14:56:08.486Z] back on projects screen
+[2026-09-04T14:56:08.486Z] P1 FIXTURE COMPLETE
+[2026-09-04T15:00:34.789Z] login ok -> projects screen
+[2026-09-04T15:00:34.911Z] project created+opened: int009-rr
+[2026-09-04T15:00:35.012Z] imported alpha.md + beta.md via browser picker
+[2026-09-04T15:00:35.081Z] doc open: alpha.md
+[2026-09-04T15:00:35.641Z] highlight created via mouse selection
+[2026-09-04T15:00:36.226Z] anchored note created via mouse selection
+[2026-09-04T15:00:36.311Z] round created: int009 Round A
+[2026-09-04T15:00:36.392Z] round created: int009 Round B
+[2026-09-04T15:00:36.525Z] project created+opened: int009-empty
+[2026-09-04T15:00:36.574Z] back on projects screen
+[2026-09-04T15:00:36.574Z] P1 FIXTURE COMPLETE
+[2026-09-04T15:16:13.231Z] P1 FAILED: page.waitForURL: Timeout 15000ms exceeded.
+=========================== logs ===========================
+waiting for navigation until "load"
+============================================================
+[2026-09-04T15:16:17.303Z] login ok -> projects screen
+[2026-09-04T15:16:17.423Z] project created+opened: int009-rr
+[2026-09-04T15:16:17.525Z] imported alpha.md + beta.md via browser picker
+[2026-09-04T15:16:17.592Z] doc open: alpha.md
+[2026-09-04T15:16:18.152Z] highlight created via mouse selection
+[2026-09-04T15:16:18.737Z] anchored note created via mouse selection
+[2026-09-04T15:16:18.822Z] round created: int009 Round A
+[2026-09-04T15:16:18.905Z] round created: int009 Round B
+[2026-09-04T15:16:19.037Z] project created+opened: int009-empty
+[2026-09-04T15:16:19.086Z] back on projects screen
+[2026-09-04T15:16:19.087Z] P1 FIXTURE COMPLETE
