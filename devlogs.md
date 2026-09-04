@@ -210,3 +210,48 @@
 - INT-006 (container/tunnel/auth) deliberately out of scope — separate run.
 - ASM-013 rewritten (agent context): per-project resolution recorded (SD-20),
   OQ-08 stays open in state.yaml until human veto window closes.
+
+## 2026-09-03 — INT-007 backend provider layer (M1: R-070..R-074, SD-20/SD-21)
+
+- Builder milestone (authorized; uncommitted until human authorizes):
+  - DeepSeek provider `app/ai/deepseek.py`: OpenAI-compatible chat-completions
+    transport at api.deepseek.com over plain httpx (httpx promoted from dev to
+    runtime dep — the anthropic SDK depends on httpx2, not httpx, so plain httpx
+    was project-only; the promotion fixes the latent gap where a production
+    install without the dev group would lack deepseek's transport);
+    single DEEPSEEK_MODEL for all five call kinds (SD-21); shared ChatFn type +
+    MAX_TOKENS_* moved to app/ai/client.py (single source, both providers).
+  - Settings R-072/R-073: DEEPSEEK_API_KEY required (ConfigError at build),
+    DEEPSEEK_MODEL fallback deepseek-v4-flash (the only occurrence of the id
+    besides .env.example); both names documented in .env.example.
+  - Persistence SD-20/R-071: projects.ai_provider TEXT NOT NULL DEFAULT
+    'deepseek' CHECK(...) in SCHEMA + migrate_legacy_projects() ALTER in
+    init_schema (legacy rows adopt deepseek on next schema init, idempotent).
+    ProjectOut/ProjectDetail carry ai_provider; PUT /projects/{id}/provider
+    (ProviderUpdate Literal schema) persists + returns project payload.
+  - Resolution SD-21: deps.py per-provider lazy cache (get_ai_client_for_provider)
+    + three typed FastAPI deps resolving entity id -> project -> provider:
+    get_ai_client_for_{resource,round,block} (block -> report -> round ->
+    project); old single get_ai_client/AiDep singleton removed; services keep
+    receiving AIClient unchanged; conftest overrides the three resolvers with
+    FakeAI (offline story intact).
+  - Failure semantics R-074: selected provider's env missing at build ->
+    ConfigError -> 503 naming the var; no fallback path exists; entity 404s
+    precede config errors (dep validates before building).
+- Tests added (29): deepseek env/settings + envelope + five-kind routing;
+  resolution (fresh default, legacy adoption, per-provider cache, no-fallback
+  unit); provider endpoint (accept/reject/persist/surface + legacy API);
+  UC-18 API boundary 503 naming vars, vertex isolation, 404 precedence.
+- Gates: pytest 99 passed/5 skipped (live), mypy strict clean (40 files),
+  ruff check clean. Two-way choices: httpx runtime dep vs urllib; three typed
+  per-shape resolver deps vs one multi-param dep (explicit, no query-param
+  leakage, conftest overrides each); client.py as shared ChatFn/MAX_TOKENS home
+  (vertex.py's anthropic import stays module-owned).
+- Notes: transport failures map to AIError -> 502 at both providers' chat
+  boundaries per the R-074 parenthetical — vertex wraps anthropic SDK APIError
+  (vertex.py chat); deepseek wraps raw httpx.HTTPError, its non-2xx statuses,
+  and the 200-with-non-JSON-body decode edge (review M1Fn-02 + M1F2-01). 5
+  offline API-boundary tests in backend/tests/test_api_transport_failures.py
+  assert 502 responses naming the failure; config errors stay 503, entity
+  errors 404. Gates after: pytest 104 passed/5 skipped, mypy 41 files clean,
+  ruff clean. DEEPSEEK_MODEL id unverified = ASM-012, live probe M3.

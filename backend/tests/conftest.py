@@ -15,7 +15,11 @@ from app.ai.client import (
     ParagraphDraft,
     ToneSampleDraft,
 )
-from app.deps import get_ai_client
+from app.deps import (
+    get_ai_client_for_block,
+    get_ai_client_for_resource,
+    get_ai_client_for_round,
+)
 from app.main import create_app
 
 ALPHA_CONTENT = (
@@ -110,7 +114,12 @@ def sample_tree(tmp_path: Path) -> Path:
 def harness(tmp_path: Path) -> Harness:
     fake = FakeAI()
     app = create_app(db_path=str(tmp_path / "test.db"))
-    app.dependency_overrides[get_ai_client] = lambda: fake
+    for resolver in (
+        get_ai_client_for_resource,
+        get_ai_client_for_round,
+        get_ai_client_for_block,
+    ):
+        app.dependency_overrides[resolver] = lambda: fake
     app.state.fake_ai = fake
     return Harness(app=app, fake=fake, db_path=tmp_path / "test.db")
 

@@ -10,14 +10,20 @@ owns that import so the rest of the app (and all default tests) stays offline.
 """
 
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 
-from anthropic import AnthropicVertex
+from anthropic import AnthropicVertex, APIError
 from anthropic.types import TextBlock
 
 from app.ai import prompts
 from app.ai.client import (
+    MAX_TOKENS_CRITIQUE,
+    MAX_TOKENS_EXPERT,
+    MAX_TOKENS_LENSES,
+    MAX_TOKENS_REPORT,
+    MAX_TOKENS_TONE,
     AIClient,
+    ChatFn,
     ExpertNoteDraft,
     LensDraft,
     ParagraphDraft,
@@ -30,10 +36,7 @@ from app.ai.parsers import (
     parse_report,
     parse_tone_samples,
 )
-from app.errors import ConfigError
-
-ChatFn = Callable[[str, str, str, int], str]
-"""ChatFn(system, user, model, max_tokens) -> assistant text."""
+from app.errors import AIError, ConfigError
 
 ENV_PROJECT_ID = "ANTHROPIC_VERTEX_PROJECT_ID"
 ENV_MODEL = "ANTHROPIC_MODEL"
@@ -44,12 +47,6 @@ ENV_ACCESS_TOKEN = "VERTEX_ACCESS_TOKEN"
 ENV_BASE_URL = "ANTHROPIC_BASE_URL"
 
 REQUIRED_ENV_VARS = (ENV_PROJECT_ID, ENV_MODEL, ENV_SMALL_MODEL)
-
-MAX_TOKENS_LENSES = 1024
-MAX_TOKENS_EXPERT = 4096
-MAX_TOKENS_REPORT = 8192
-MAX_TOKENS_TONE = 2048
-MAX_TOKENS_CRITIQUE = 2048
 
 
 class VertexSettings:
@@ -110,12 +107,15 @@ def build_vertex_chat(settings: VertexSettings) -> ChatFn:
     )
 
     def chat(system: str, user: str, model: str, max_tokens: int) -> str:
-        message = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
+        try:
+            message = client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+        except APIError as exc:
+            raise AIError(f"vertex AI call failed: {str(exc)[:500]}") from exc
         return _join_text_blocks(list(message.content))
 
     return chat

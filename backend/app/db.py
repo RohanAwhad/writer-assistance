@@ -10,6 +10,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    ai_provider TEXT NOT NULL DEFAULT 'deepseek'
+        CHECK (ai_provider IN ('vertex', 'deepseek')),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -156,7 +158,20 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    migrate_legacy_projects(conn)
     conn.commit()
+
+
+def migrate_legacy_projects(conn: sqlite3.Connection) -> None:
+    """Add projects.ai_provider to pre-INT-007 databases (SD-20).
+
+    ``CREATE TABLE IF NOT EXISTS`` leaves existing projects tables untouched, so
+    legacy rows get the column here with its DEFAULT 'deepseek' — they read back
+    as 'deepseek' (the fresh-project default) without data loss.
+    """
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(projects)")}
+    if "ai_provider" not in columns:
+        conn.execute("ALTER TABLE projects ADD COLUMN ai_provider TEXT NOT NULL DEFAULT 'deepseek'")
 
 
 def fetch_one(

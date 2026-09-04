@@ -14,15 +14,21 @@ LensProposalStatus = Literal["proposed", "selected", "skipped"]
 RoundStage = Literal["reading", "editing"]
 ExpertNoteState = Literal["pending", "accepted", "discarded", "merged-with-edits"]
 DumpEntryKind = Literal["snippet", "highlight", "human-thought", "ai-thought"]
+AiProvider = Literal["vertex", "deepseek"]
 
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
 
 
+class ProviderUpdate(BaseModel):
+    provider: AiProvider
+
+
 class ProjectOut(BaseModel):
     id: ProjectId
     name: str
+    ai_provider: AiProvider
     created_at: datetime
     updated_at: datetime
 

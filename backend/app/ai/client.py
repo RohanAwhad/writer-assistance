@@ -1,13 +1,24 @@
 """AI client contracts (R-004): the single boundary every AI call crosses.
 
 Draft dataclasses are the parsed, typed outputs the rest of the app consumes.
-``AIClient`` is the protocol implemented by the live AnthropicVertex-backed
-wrapper and by test fakes; endpoints depend on it and are therefore fully
-offline-testable (spec SD-16).
+``AIClient`` is the protocol implemented by the live provider backends
+(AnthropicVertex, DeepSeek) and by test fakes; endpoints depend on it and are
+therefore fully offline-testable (spec SD-16). ``ChatFn`` and the per-call-kind
+token budgets are shared by every provider transport (SD-21).
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
+
+ChatFn = Callable[[str, str, str, int], str]
+"""chat(system, user, model, max_tokens) -> assistant text; the transport seam."""
+
+MAX_TOKENS_LENSES = 1024
+MAX_TOKENS_EXPERT = 4096
+MAX_TOKENS_REPORT = 8192
+MAX_TOKENS_TONE = 2048
+MAX_TOKENS_CRITIQUE = 2048
 
 
 @dataclass(frozen=True)

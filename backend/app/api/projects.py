@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Response
 
-from app.deps import AiDep, DbDep
+from app.deps import DbDep, ResourceAiDep
 from app.schemas import (
     AnnotationOut,
     AnnotationUpdate,
@@ -15,6 +15,7 @@ from app.schemas import (
     ProjectCreate,
     ProjectDetail,
     ProjectOut,
+    ProviderUpdate,
     ResourceOut,
     TreeOut,
 )
@@ -41,6 +42,11 @@ def get_project(db: DbDep, project_id: int) -> ProjectDetail:
 @router.put("/projects/{project_id}", response_model=ProjectOut)
 def rename_project(db: DbDep, project_id: int, body: ProjectCreate) -> ProjectOut:
     return projects.rename_project(db, project_id, body.name)
+
+
+@router.put("/projects/{project_id}/provider", response_model=ProjectOut)
+def update_project_provider(db: DbDep, project_id: int, body: ProviderUpdate) -> ProjectOut:
+    return projects.set_project_provider(db, project_id, body.provider)
 
 
 @router.delete("/projects/{project_id}", status_code=204)
@@ -95,7 +101,7 @@ def delete_annotation(db: DbDep, annotation_id: int) -> Response:
     response_model=list[LensProposalOut],
     status_code=201,
 )
-def propose_lenses(db: DbDep, ai: AiDep, resource_id: int) -> list[LensProposalOut]:
+def propose_lenses(db: DbDep, ai: ResourceAiDep, resource_id: int) -> list[LensProposalOut]:
     return lenses.propose_lenses(db, ai, resource_id)
 
 

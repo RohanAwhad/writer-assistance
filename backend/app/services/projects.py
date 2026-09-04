@@ -18,23 +18,42 @@ from app.schemas import (
     TreeOut,
 )
 
-_PROJECT_COLS = "id, name, created_at, updated_at"
+_PROJECT_COLS = "id, name, ai_provider, created_at, updated_at"
 
 
 def _require_project_row(conn: sqlite3.Connection, project_id: int) -> sqlite3.Row:
-    row = fetch_one(
-        conn, f"SELECT {_PROJECT_COLS} FROM projects WHERE id = ?", (project_id,)
-    )
+    row = fetch_one(conn, f"SELECT {_PROJECT_COLS} FROM projects WHERE id = ?", (project_id,))
     if row is None:
         raise NotFoundError(f"project {project_id} not found")
     return row
+
+
+def get_ai_provider(conn: sqlite3.Connection, project_id: int) -> str:
+    """The project's stored ai_provider value ('vertex'|'deepseek'; SD-20/R-071)."""
+    row = fetch_one(conn, "SELECT ai_provider FROM projects WHERE id = ?", (project_id,))
+    if row is None:
+        raise NotFoundError(f"project {project_id} not found")
+    return str(row["ai_provider"])
+
+
+def _project_out(conn: sqlite3.Connection, project_id: int) -> ProjectOut:
+    row = fetch_one(conn, f"SELECT {_PROJECT_COLS} FROM projects WHERE id = ?", (project_id,))
+    if row is None:
+        raise NotFoundError(f"project {project_id} not found")
+    return ProjectOut(
+        id=int(row["id"]),
+        name=str(row["name"]),
+        ai_provider=str(row["ai_provider"]),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
 
 
 def create_project(conn: sqlite3.Connection, name: str) -> ProjectOut:
     ts = now_utc()
     row = conn.execute(
         """INSERT INTO projects (name, created_at, updated_at)
-           VALUES (?, ?, ?) RETURNING id, name, created_at, updated_at""",
+           VALUES (?, ?, ?) RETURNING id, name, ai_provider, created_at, updated_at""",
         (name, ts, ts),
     ).fetchone()
     if row is None:
@@ -43,6 +62,7 @@ def create_project(conn: sqlite3.Connection, name: str) -> ProjectOut:
     return ProjectOut(
         id=int(row["id"]),
         name=str(row["name"]),
+        ai_provider=str(row["ai_provider"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -53,6 +73,7 @@ def list_projects(conn: sqlite3.Connection) -> list[ProjectOut]:
         ProjectOut(
             id=int(row["id"]),
             name=str(row["name"]),
+            ai_provider=str(row["ai_provider"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
@@ -64,7 +85,7 @@ def list_projects(conn: sqlite3.Connection) -> list[ProjectOut]:
 def get_project(conn: sqlite3.Connection, project_id: int) -> ProjectDetail:
     _require_project_row(conn, project_id)
     row = conn.execute(
-        """SELECT p.id, p.name, p.created_at, p.updated_at,
+        """SELECT p.id, p.name, p.ai_provider, p.created_at, p.updated_at,
                   (SELECT COUNT(*) FROM resource_nodes n
                    WHERE n.project_id = p.id AND n.is_dir = 0) AS resource_count,
                   (SELECT COUNT(*) FROM reading_rounds r WHERE r.project_id = p.id) AS round_count
@@ -76,6 +97,7 @@ def get_project(conn: sqlite3.Connection, project_id: int) -> ProjectDetail:
     return ProjectDetail(
         id=int(row["id"]),
         name=str(row["name"]),
+        ai_provider=str(row["ai_provider"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         resource_count=int(row["resource_count"]),
@@ -91,17 +113,19 @@ def rename_project(conn: sqlite3.Connection, project_id: int, name: str) -> Proj
         (name, ts, project_id),
     )
     conn.commit()
-    row = conn.execute(
-        f"SELECT {_PROJECT_COLS} FROM projects WHERE id = ?", (project_id,)
-    ).fetchone()
-    if row is None:
-        raise NotFoundError(f"project {project_id} not found")
-    return ProjectOut(
-        id=int(row["id"]),
-        name=str(row["name"]),
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
+    return _project_out(conn, project_id)
+
+
+def set_project_provider(conn: sqlite3.Connection, project_id: int, provider: str) -> ProjectOut:
+    """Persist the project's selected AI provider (R-071); fresh default 'deepseek'."""
+    _require_project_row(conn, project_id)
+    ts = now_utc()
+    conn.execute(
+        "UPDATE projects SET ai_provider = ?, updated_at = ? WHERE id = ?",
+        (provider, ts, project_id),
     )
+    conn.commit()
+    return _project_out(conn, project_id)
 
 
 def delete_project(conn: sqlite3.Connection, project_id: int) -> None:

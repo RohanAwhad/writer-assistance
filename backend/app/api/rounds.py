@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.deps import AiDep, DbDep
+from app.deps import DbDep, RoundAiDep
 from app.schemas import (
     DumpEntryOut,
     DumpOut,
@@ -39,7 +39,7 @@ def get_round(db: DbDep, round_id: int) -> RoundDetailOut:
 
 
 @router.post("/rounds/{round_id}/experts", response_model=ExpertRunsOut, status_code=201)
-def run_experts(db: DbDep, ai: AiDep, round_id: int, body: ExpertRunRequest) -> ExpertRunsOut:
+def run_experts(db: DbDep, ai: RoundAiDep, round_id: int, body: ExpertRunRequest) -> ExpertRunsOut:
     return experts.run_experts(db, ai, round_id, body.lens_proposal_ids)
 
 
